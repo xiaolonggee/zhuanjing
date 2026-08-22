@@ -1320,7 +1320,7 @@
       border: 1px solid var(--gold);
       border-radius: 0.65rem;
       color: var(--gold);
-      transform: rotate(var(--device-tilt, 0deg));
+      transform: translate(var(--device-x, 0px), var(--device-y, 0px)) rotate(var(--device-tilt, 0deg));
       transition: transform 100ms linear;
     }
 
@@ -1824,7 +1824,7 @@
       <section class="intro" aria-labelledby="hero-title">
         <p class="eyebrow">Digital mani wheel / 数字玛尼轮</p>
         <h1 id="hero-title">以手为风，<em>令山河转动。</em></h1>
-        <p class="intro-copy">无需按键，晃动鼠标绕轮而行；也可先张掌准备、再握拳自动驱动，或转动、晃动手机。经轮将唤起高原的风、光与经幡。</p>
+        <p class="intro-copy">无需按键，晃动鼠标绕轮而行；也可先张掌准备、再握拳自动驱动，或握住手机像真实转经筒一样画圆。经轮将唤起高原的风、光与经幡。</p>
         <div class="mantra-line" lang="bo">ༀ་མ་ཎི་པདྨེ་ཧཱུྃ།</div>
 
         <details class="culture-note">
@@ -1918,9 +1918,9 @@
         <section class="motion-panel" id="motion-panel" aria-label="手机体感控制">
           <div class="motion-device" id="motion-device" aria-hidden="true"></div>
           <div class="motion-copy">
-            <strong id="motion-message">顺时针或逆时针转动手机，也可轻轻晃动续风。</strong>
+            <strong id="motion-message">握住手机画小圆：水平绕动或在屏幕前画圆都可以。</strong>
             <div class="tilt-track" aria-hidden="true"><i class="tilt-indicator" id="tilt-indicator"></i></div>
-            <small>转动方向与经轮同步；晃动会沿当前方向增加惯性。</small>
+            <small>系统会自动锁定动作平面；顺时针画圆即顺转，逆时针画圆即逆转。</small>
           </div>
         </section>
 
@@ -2243,73 +2243,89 @@
           previousY: 0,
           previousZ: 0,
           hasPrevious: false,
-          gravityX: 0,
-          gravityY: 0,
-          gravityZ: 0,
-          hasGravity: false,
+          normalX: 0,
+          normalY: 0,
+          normalZ: 0,
+          hasNormal: false,
+          sampleAt: 0,
           lastAt: 0,
           lastReliableAt: 0,
           cooldownUntil: 0,
           pendingDegrees: 0,
+          angularVelocity: 0,
           coherence: 0,
+          covarianceXX: 0,
+          covarianceYY: 0,
+          covarianceZZ: 0,
+          covarianceXY: 0,
+          covarianceXZ: 0,
+          covarianceYZ: 0,
+          hasCovariance: false,
           active: false,
           direction: 0
         });
 
         const reset = (detector) => Object.assign(detector, create());
 
-        const step = (detector, x, y, now) => {
+        const step = (detector, x, y, z, gx, gy, gz, now, magnitudeThreshold = 0.65) => {
           const result = {
             degrees: 0,
             active: detector.active,
             tracking: false,
             direction: detector.direction,
+            velocity: detector.angularVelocity,
             magnitude: 0,
+            confidence: Math.abs(detector.coherence),
+            circularity: 0,
             x: detector.x,
             y: detector.y,
             z: detector.z
           };
           if (![x, y, z, gx, gy, gz, now].every(Number.isFinite)) return result;
 
-          const gravityLength = Math.hypot(gx, gy, gz);
-          if (gravityLength < 1e-4) return result;
-          const gravityX = gx / gravityLength;
-          const gravityY = gy / gravityLength;
-          const gravityZ = gz / gravityLength;
-          if (detector.hasGravity) {
-            const gravityAlignment = detector.gravityX * gravityX
-              + detector.gravityY * gravityY
-              + detector.gravityZ * gravityZ;
-            if (gravityAlignment < 0.94) {
-              detector.hasPrevious = false;
-              detector.pendingDegrees = 0;
-              detector.coherence = 0;
-              detector.active = false;
-              detector.direction = 0;
+          const normalLength = Math.hypot(gx, gy, gz);
+          if (normalLength < 1e-4) return result;
+          const normalX = gx / normalLength;
+          const normalY = gy / normalLength;
+          const normalZ = gz / normalLength;
+          if (detector.hasNormal) {
+            const normalAlignment = detector.normalX * normalX
+              + detector.normalY * normalY
+              + detector.normalZ * normalZ;
+            if (normalAlignment < 0.94) {
+              reset(detector);
+              result.active = false;
+              result.direction = 0;
+              result.velocity = 0;
+              result.confidence = 0;
             }
           }
-          detector.gravityX = gravityX;
-          detector.gravityY = gravityY;
-          detector.gravityZ = gravityZ;
-          detector.hasGravity = true;
+          detector.normalX = normalX;
+          detector.normalY = normalY;
+          detector.normalZ = normalZ;
+          detector.hasNormal = true;
 
-          const gravityComponent = x * gravityX + y * gravityY + z * gravityZ;
-          const projectedX = x - gravityComponent * gravityX;
-          const projectedY = y - gravityComponent * gravityY;
-          const projectedZ = z - gravityComponent * gravityZ;
+          const normalComponent = x * normalX + y * normalY + z * normalZ;
+          const projectedX = x - normalComponent * normalX;
+          const projectedY = y - normalComponent * normalY;
+          const projectedZ = z - normalComponent * normalZ;
           const rawMagnitude = Math.hypot(projectedX, projectedY, projectedZ);
           if (rawMagnitude > 12) {
-            detector.hasPrevious = false;
-            detector.pendingDegrees = 0;
-            detector.coherence = 0;
-            detector.active = false;
-            detector.direction = 0;
+            reset(detector);
             detector.cooldownUntil = now + 220;
+            result.active = false;
+            result.direction = 0;
+            result.velocity = 0;
+            result.confidence = 0;
             return result;
           }
           if (now < detector.cooldownUntil) return result;
 
-          const smoothing = detector.hasVector ? 0.44 : 1;
+          const sampleElapsed = detector.sampleAt
+            ? clamp(now - detector.sampleAt, 4, 100)
+            : 16.667;
+          detector.sampleAt = now;
+          const smoothing = detector.hasVector ? 1 - Math.exp(-sampleElapsed / 42) : 1;
           detector.x += (projectedX - detector.x) * smoothing;
           detector.y += (projectedY - detector.y) * smoothing;
           detector.z += (projectedZ - detector.z) * smoothing;
@@ -2320,9 +2336,11 @@
           result.y = detector.y;
           result.z = detector.z;
 
-          if (magnitude < 0.65) {
-            detector.coherence *= 0.75;
-            detector.pendingDegrees *= 0.7;
+          const enterMagnitude = clamp(magnitudeThreshold, 0.42, 0.7);
+          const requiredMagnitude = detector.active ? enterMagnitude * 0.58 : enterMagnitude;
+          if (magnitude < requiredMagnitude) {
+            detector.coherence *= Math.exp(-sampleElapsed / 120);
+            detector.pendingDegrees *= Math.exp(-sampleElapsed / 150);
             if (now - detector.lastReliableAt > 180) reset(detector);
             result.active = detector.active;
             return result;
@@ -2332,6 +2350,24 @@
           const currentX = detector.x / magnitude;
           const currentY = detector.y / magnitude;
           const currentZ = detector.z / magnitude;
+          const covarianceBlend = detector.hasCovariance
+            ? 1 - Math.exp(-sampleElapsed / 240)
+            : 1;
+          detector.covarianceXX += (currentX * currentX - detector.covarianceXX) * covarianceBlend;
+          detector.covarianceYY += (currentY * currentY - detector.covarianceYY) * covarianceBlend;
+          detector.covarianceZZ += (currentZ * currentZ - detector.covarianceZZ) * covarianceBlend;
+          detector.covarianceXY += (currentX * currentY - detector.covarianceXY) * covarianceBlend;
+          detector.covarianceXZ += (currentX * currentZ - detector.covarianceXZ) * covarianceBlend;
+          detector.covarianceYZ += (currentY * currentZ - detector.covarianceYZ) * covarianceBlend;
+          detector.hasCovariance = true;
+          const covarianceSquare = detector.covarianceXX ** 2
+            + detector.covarianceYY ** 2
+            + detector.covarianceZZ ** 2
+            + 2 * (detector.covarianceXY ** 2
+              + detector.covarianceXZ ** 2
+              + detector.covarianceYZ ** 2);
+          const circularity = clamp(2 * (1 - covarianceSquare), 0, 1);
+          result.circularity = circularity;
           if (!detector.hasPrevious || now - detector.lastAt > 160) {
             detector.previousX = currentX;
             detector.previousY = currentY;
@@ -2350,11 +2386,11 @@
           const crossX = detector.previousY * currentZ - detector.previousZ * currentY;
           const crossY = detector.previousZ * currentX - detector.previousX * currentZ;
           const crossZ = detector.previousX * currentY - detector.previousY * currentX;
-          const crossAlongGravity = gravityX * crossX + gravityY * crossY + gravityZ * crossZ;
+          const crossAlongNormal = normalX * crossX + normalY * crossY + normalZ * crossZ;
           const vectorDot = detector.previousX * currentX
             + detector.previousY * currentY
             + detector.previousZ * currentZ;
-          const delta = -Math.atan2(crossAlongGravity, vectorDot) * 180 / Math.PI;
+          const delta = -Math.atan2(crossAlongNormal, vectorDot) * 180 / Math.PI;
           detector.previousX = currentX;
           detector.previousY = currentY;
           detector.previousZ = currentZ;
@@ -2368,19 +2404,27 @@
             detector.direction = 0;
             return result;
           }
-          if (Math.abs(delta) < 0.2) {
+          if (Math.abs(delta) < 0.04) {
             result.active = detector.active;
             return result;
           }
 
+          const sampleVelocity = delta * 1000 / Math.max(8, elapsed);
+          const velocityBlend = 1 - Math.exp(-elapsed / 70);
+          detector.angularVelocity += (sampleVelocity - detector.angularVelocity) * velocityBlend;
           const sampleDirection = Math.sign(delta);
-          const directionEvidence = sampleDirection * Math.min(1, Math.abs(delta) / 5);
-          detector.coherence = detector.coherence * 0.68 + directionEvidence * 0.32;
+          const directionEvidence = sampleDirection * Math.min(1, Math.abs(sampleVelocity) / 100);
+          const coherenceBlend = 1 - Math.exp(-elapsed / 70);
+          detector.coherence += (directionEvidence - detector.coherence) * coherenceBlend;
           detector.pendingDegrees = Math.max(-100, Math.min(100, detector.pendingDegrees + delta));
 
+          const activationCoherence = 0.82;
+          const activationTravel = 24;
+          const activationCircularity = 0.4;
           if (!detector.active
-            && Math.abs(detector.coherence) > 0.55
-            && Math.abs(detector.pendingDegrees) >= 8) {
+            && Math.abs(detector.coherence) > activationCoherence
+            && Math.abs(detector.pendingDegrees) >= activationTravel
+            && circularity >= activationCircularity) {
             detector.active = true;
             detector.direction = Math.sign(detector.coherence);
             result.degrees = detector.pendingDegrees;
@@ -2390,7 +2434,7 @@
               result.degrees = detector.pendingDegrees;
               detector.pendingDegrees = 0;
             } else if (Math.sign(detector.coherence) !== detector.direction
-              && Math.abs(detector.coherence) > 0.52) {
+              && Math.abs(detector.coherence) > 0.46) {
               detector.direction = Math.sign(detector.coherence);
               result.degrees = detector.pendingDegrees;
               detector.pendingDegrees = 0;
@@ -2399,6 +2443,8 @@
 
           result.active = detector.active;
           result.direction = detector.direction;
+          result.velocity = detector.angularVelocity;
+          result.confidence = Math.abs(detector.coherence);
           return result;
         };
 
@@ -2482,9 +2528,19 @@
         lastMotionAt: 0,
         motionQuaternion: null,
         motionCircle: CircularMotionDetector.create(),
+        motionScreenCircle: CircularMotionDetector.create(),
+        motionCircleMode: null,
+        motionWasTracking: false,
         motionGravityBaseline: null,
+        motionGravityBaselineAt: 0,
+        motionSampleAt: 0,
+        lastValidDeviceMotionAt: 0,
+        motionCalibrationStableAt: 0,
+        motionCalibrationNoisePower: 0,
+        motionCalibrationSamples: 0,
+        motionCalibrated: false,
+        motionMagnitudeThreshold: 0.65,
         motionReceived: false,
-        lastShakeAt: 0,
         motionListening: false,
         motionStarting: false,
         motionRequestId: 0,
@@ -2493,6 +2549,7 @@
         deviceMotionPermissionGranted: false,
         motionTimeout: 0,
         motionInputPending: 0,
+        motionVelocityPending: 0,
         motionTiltPending: null,
         lastBellTurn: 0,
         mani3D: null
@@ -2894,7 +2951,7 @@
         stageInstruction.textContent = gestureActive
           ? "张掌准备 · 握拳自动转动"
           : motionActive
-            ? "转动或晃动手机"
+            ? "握住手机 · 顺逆时针画小圆"
             : "无需按键 · 绕轮晃动鼠标";
         state.lastPointerAngle = null;
         state.inputResidual = 0;
@@ -3381,7 +3438,11 @@
           const direction = state.velocity >= 0 ? "顺时针" : "逆时针";
           setStatus(active ? `${direction}转动中` : "等待鼠标绕转", active);
         } else if (state.mode === "motion" && !active && state.motionListening) {
-          setStatus("手机体感已就绪", false);
+          const calibrating = state.deviceMotionPermissionGranted && !state.motionCalibrated;
+          const readyStatus = state.deviceMotionPermissionGranted
+            ? "手机圆周体感已就绪"
+            : "手机方向感应已就绪";
+          setStatus(calibrating ? "等待手机体感校准" : readyStatus, calibrating);
         }
 
         if (state.windGain && state.audioContext) {
@@ -3693,22 +3754,46 @@
         };
       }
 
+      function rotateVectorByQuaternion(vector, quaternion) {
+        const [vx, vy, vz] = vector;
+        const [w, qx, qy, qz] = quaternion;
+        const tx = 2 * (qy * vz - qz * vy);
+        const ty = 2 * (qz * vx - qx * vz);
+        const tz = 2 * (qx * vy - qy * vx);
+        return [
+          vx + w * tx + qy * tz - qz * ty,
+          vy + w * ty + qz * tx - qx * tz,
+          vz + w * tz + qx * ty - qy * tx
+        ];
+      }
+
       function calibrateMotion() {
         state.motionQuaternion = null;
         state.lastMotionAt = 0;
-        state.motionAxis = "screen";
-        state.motionAxisUntil = 0;
-        state.motionGravity = null;
+        CircularMotionDetector.reset(state.motionCircle);
+        CircularMotionDetector.reset(state.motionScreenCircle);
+        state.motionCircleMode = null;
+        state.motionWasTracking = false;
         state.motionGravityBaseline = null;
-        state.lastShakeAt = 0;
+        state.motionGravityBaselineAt = 0;
+        state.motionSampleAt = 0;
+        state.lastValidDeviceMotionAt = 0;
+        state.motionCalibrationStableAt = 0;
+        state.motionCalibrationNoisePower = 0;
+        state.motionCalibrationSamples = 0;
+        state.motionCalibrated = false;
+        state.motionMagnitudeThreshold = 0.65;
         state.inputResidual = 0;
         state.inputActiveUntil = performance.now();
         state.motionReceived = false;
         state.motionInputPending = 0;
+        state.motionVelocityPending = 0;
         state.motionTiltPending = null;
+        motionDevice.style.setProperty("--device-x", "0px");
+        motionDevice.style.setProperty("--device-y", "0px");
         motionDevice.style.setProperty("--device-tilt", "0deg");
         tiltIndicator.style.setProperty("--tilt-position", "0%");
-        motionMessage.textContent = "正在读取方向：顺逆转动手机，或轻晃续风…";
+        motionMessage.textContent = "正在校准：请短暂停稳，随后顺时针或逆时针画小圆…";
         setStatus("正在连接手机体感", true);
       }
 
@@ -3717,40 +3802,45 @@
         if (![event.alpha, event.beta, event.gamma].every(Number.isFinite)) return;
         const now = performance.now();
         const nextQuaternion = quaternionFromOrientation(event.alpha, event.beta, event.gamma);
-        window.clearTimeout(state.motionTimeout);
-        state.motionReceived = true;
 
         if (!state.motionQuaternion || now - state.lastMotionAt > 420) {
           state.motionQuaternion = nextQuaternion;
           state.lastMotionAt = now;
-          motionMessage.textContent = state.deviceMotionPermissionGranted
-            ? "体感已就绪：顺逆转动手机，或轻晃续风。"
-            : "手机旋转已就绪：顺时针或逆时针转动即可。";
-          setStatus("手机体感已就绪", false);
+          if (now - state.lastValidDeviceMotionAt > 520) {
+            window.clearTimeout(state.motionTimeout);
+            state.motionReceived = true;
+            motionMessage.textContent = "方向感应已就绪：可绕竖轴或正对屏幕顺逆转动。";
+            setStatus("手机方向感应已就绪", false);
+          }
           return;
         }
 
-        const delta = localRotationVector(state.motionQuaternion, nextQuaternion);
+        const elapsed = now - state.lastMotionAt;
+        const previousQuaternion = state.motionQuaternion;
+        const delta = localRotationVector(previousQuaternion, nextQuaternion);
         state.motionQuaternion = delta.quaternion;
         state.lastMotionAt = now;
-        const screenSpin = delta.vector[2];
-        const gravitySpin = state.motionGravity
-          ? delta.vector[0] * state.motionGravity[0]
-            + delta.vector[1] * state.motionGravity[1]
-            + delta.vector[2] * state.motionGravity[2]
-          : 0;
-
-        if (now >= state.motionAxisUntil) {
-          state.motionAxis = Math.abs(gravitySpin) > Math.abs(screenSpin) * 1.12 ? "gravity" : "screen";
-          state.motionAxisUntil = now + 260;
-        }
-        const chosen = state.motionAxis === "gravity" ? gravitySpin : screenSpin;
-        const clockwiseDegrees = -chosen * 180 / Math.PI;
+        if (now - state.lastValidDeviceMotionAt <= 520) return;
+        window.clearTimeout(state.motionTimeout);
+        state.motionReceived = true;
+        const worldDelta = rotateVectorByQuaternion(delta.vector, previousQuaternion);
+        const screenDegrees = -delta.vector[2] * 180 / Math.PI;
+        const verticalDegrees = -worldDelta[2] * 180 / Math.PI;
+        const clockwiseDegrees = Math.abs(verticalDegrees) > Math.abs(screenDegrees)
+          ? verticalDegrees
+          : screenDegrees;
         if (Math.abs(clockwiseDegrees) > 28) return;
 
         if (clockwiseDegrees !== 0) {
           state.motionInputPending += clockwiseDegrees;
+          state.motionVelocityPending = clamp(
+            clockwiseDegrees * 1000 / Math.max(8, elapsed) / 60,
+            -24,
+            24
+          );
           state.motionTiltPending = {
+            x: 0,
+            y: 0,
             tilt: clamp(clockwiseDegrees * 1.7, -18, 18),
             track: clamp(clockwiseDegrees * 4.2, -43, 43)
           };
@@ -3763,59 +3853,227 @@
 
       function processMotionInput() {
         const degrees = state.motionInputPending;
+        const velocity = state.motionVelocityPending;
         const tilt = state.motionTiltPending;
         state.motionInputPending = 0;
+        state.motionVelocityPending = 0;
         state.motionTiltPending = null;
         if (tilt) {
+          motionDevice.style.setProperty("--device-x", `${tilt.x.toFixed(1)}px`);
+          motionDevice.style.setProperty("--device-y", `${tilt.y.toFixed(1)}px`);
           motionDevice.style.setProperty("--device-tilt", `${tilt.tilt.toFixed(1)}deg`);
           tiltIndicator.style.setProperty("--tilt-position", `${tilt.track.toFixed(1)}%`);
         }
         if (!degrees) return;
-        const committed = rotateByInput(degrees, 0.76, 0.1, 180);
-        if (committed) setStatus(`手机${degrees > 0 ? "顺时针" : "逆时针"}转动中`, true);
+        commitRotation(degrees);
+        state.lastDirection = Math.sign(degrees);
+        state.velocity = clamp(velocity || degrees * 0.76, -24, 24);
+        state.inputActiveUntil = performance.now() + 160;
+        ensureAnimation();
+        setStatus(`手机${degrees > 0 ? "顺时针" : "逆时针"}画圆 · 经轮同步`, true);
       }
 
       function handleDeviceMotion(event) {
         if (state.mode !== "motion") return;
-        const gravity = event.accelerationIncludingGravity;
-        if (gravity && [gravity.x, gravity.y, gravity.z].every(Number.isFinite)) {
-          const length = Math.hypot(gravity.x, gravity.y, gravity.z) || 1;
-          state.motionGravity = [gravity.x / length, gravity.y / length, gravity.z / length];
-        }
+        const hasVector = (vector) => vector
+          && [vector.x, vector.y, vector.z].every(Number.isFinite);
+        const includingGravity = event.accelerationIncludingGravity;
+        const linearAcceleration = event.acceleration;
+        const hasGravitySample = hasVector(includingGravity);
+        const hasLinearSample = hasVector(linearAcceleration);
+        if (!hasGravitySample && !hasLinearSample) return;
 
-        let acceleration = event.acceleration;
-        if (!acceleration || ![acceleration.x, acceleration.y, acceleration.z].every(Number.isFinite)) {
-          if (!gravity || ![gravity.x, gravity.y, gravity.z].every(Number.isFinite)) return;
-          if (!state.motionGravityBaseline) {
-            state.motionGravityBaseline = [gravity.x, gravity.y, gravity.z];
-            return;
-          }
-          const alpha = 0.88;
-          state.motionGravityBaseline = state.motionGravityBaseline.map((value, index) => {
-            const sample = [gravity.x, gravity.y, gravity.z][index];
-            return value * alpha + sample * (1 - alpha);
-          });
-          acceleration = {
-            x: gravity.x - state.motionGravityBaseline[0],
-            y: gravity.y - state.motionGravityBaseline[1],
-            z: gravity.z - state.motionGravityBaseline[2]
-          };
-        }
-
-        const screenAngle = Number(screen.orientation?.angle ?? window.orientation ?? 0) * Math.PI / 180;
-        const screenX = acceleration.x * Math.cos(screenAngle) + acceleration.y * Math.sin(screenAngle);
-        const screenY = -acceleration.x * Math.sin(screenAngle) + acceleration.y * Math.cos(screenAngle);
-        const force = Math.hypot(screenX, screenY, acceleration.z);
         const now = performance.now();
+        const sampleElapsed = state.motionSampleAt
+          ? clamp(now - state.motionSampleAt, 4, 120)
+          : 16.667;
+        state.motionSampleAt = now;
+        const gravitySampleMagnitude = hasGravitySample
+          ? Math.hypot(includingGravity.x, includingGravity.y, includingGravity.z)
+          : 0;
+        const linearSampleMagnitude = hasLinearSample
+          ? Math.hypot(linearAcceleration.x, linearAcceleration.y, linearAcceleration.z)
+          : 0;
+        if (gravitySampleMagnitude > 2 || linearSampleMagnitude > 0.08) {
+          state.lastValidDeviceMotionAt = now;
+        }
         state.motionReceived = true;
         window.clearTimeout(state.motionTimeout);
 
-        if (force > 2.6 && now - state.lastShakeAt > 145) {
-          state.lastShakeAt = now;
-          const boost = 3.2 + clamp((force - 2.6) * 0.82, 0, 7.5);
-          impartSpin((state.lastDirection || 1) * boost);
-          setStatus("手机晃动 · 经轮续风", true);
-          motionMessage.textContent = "已感应晃动；继续转动手机可切换旋转方向。";
+        let acceleration;
+        let gravityVector;
+        let calibrationMagnitude;
+        if (hasLinearSample) {
+          acceleration = [linearAcceleration.x, linearAcceleration.y, linearAcceleration.z];
+          calibrationMagnitude = linearSampleMagnitude;
+          if (hasGravitySample) {
+            gravityVector = [
+              includingGravity.x - linearAcceleration.x,
+              includingGravity.y - linearAcceleration.y,
+              includingGravity.z - linearAcceleration.z
+            ];
+            state.motionGravityBaseline = gravityVector.slice();
+            state.motionGravityBaselineAt = now;
+          } else {
+            gravityVector = state.motionGravityBaseline || [0, 1, 0];
+          }
+        } else {
+          if (!state.motionGravityBaseline) {
+            state.motionGravityBaseline = [
+              includingGravity.x,
+              includingGravity.y,
+              includingGravity.z
+            ];
+            state.motionGravityBaselineAt = now;
+            state.motionCalibrationStableAt = now;
+            setText(motionMessage, "请将手机短暂停稳 · 正在校准动作感应…");
+            return;
+          }
+          const baselineDelta = [
+            includingGravity.x - state.motionGravityBaseline[0],
+            includingGravity.y - state.motionGravityBaseline[1],
+            includingGravity.z - state.motionGravityBaseline[2]
+          ];
+          calibrationMagnitude = Math.hypot(...baselineDelta);
+          const baselineBlend = 1 - Math.exp(
+            -sampleElapsed / (state.motionCalibrated ? 2400 : 75)
+          );
+          state.motionGravityBaseline = state.motionGravityBaseline.map((value, index) => {
+            const sample = [includingGravity.x, includingGravity.y, includingGravity.z][index];
+            return value + (sample - value) * baselineBlend;
+          });
+          acceleration = [
+            includingGravity.x - state.motionGravityBaseline[0],
+            includingGravity.y - state.motionGravityBaseline[1],
+            includingGravity.z - state.motionGravityBaseline[2]
+          ];
+          gravityVector = state.motionGravityBaseline;
+        }
+
+        if (!state.motionCalibrated) {
+          if (!state.motionCalibrationStableAt) state.motionCalibrationStableAt = now;
+          if (calibrationMagnitude > 0.34) {
+            state.motionCalibrationStableAt = now;
+            state.motionCalibrationNoisePower = 0;
+            state.motionCalibrationSamples = 0;
+            setText(motionMessage, "请将手机短暂停稳 · 校准完成后再画圆");
+            return;
+          }
+          state.motionCalibrationSamples += 1;
+          state.motionCalibrationNoisePower += (
+            calibrationMagnitude ** 2 - state.motionCalibrationNoisePower
+          ) / state.motionCalibrationSamples;
+          if (now - state.motionCalibrationStableAt < 280) {
+            setText(motionMessage, "请将手机短暂停稳 · 正在校准动作感应…");
+            return;
+          }
+          const noiseRms = Math.sqrt(state.motionCalibrationNoisePower);
+          state.motionMagnitudeThreshold = clamp(noiseRms * 4 + 0.08, 0.42, 0.65);
+          state.motionCalibrated = true;
+          setText(motionMessage, "校准完成 · 水平绕动或在屏幕前画圆都可以");
+          setStatus("手机圆周体感已就绪", false);
+        }
+
+        let screenNormal = [0, 0, 1];
+        if (state.motionQuaternion) {
+          acceleration = rotateVectorByQuaternion(acceleration, state.motionQuaternion);
+          gravityVector = rotateVectorByQuaternion(gravityVector, state.motionQuaternion);
+          screenNormal = rotateVectorByQuaternion(screenNormal, state.motionQuaternion);
+        }
+
+        const stepCircle = (detector, normal) => CircularMotionDetector.step(
+          detector,
+          acceleration[0],
+          acceleration[1],
+          acceleration[2],
+          normal[0],
+          normal[1],
+          normal[2],
+          now,
+          state.motionMagnitudeThreshold
+        );
+
+        let circle;
+        let circleNormal;
+        if (state.motionCircleMode === "horizontal") {
+          circle = stepCircle(state.motionCircle, gravityVector);
+          circleNormal = gravityVector;
+        } else if (state.motionCircleMode === "screen") {
+          circle = stepCircle(state.motionScreenCircle, screenNormal);
+          circleNormal = screenNormal;
+        } else {
+          const horizontalCircle = stepCircle(state.motionCircle, gravityVector);
+          const screenCircle = stepCircle(state.motionScreenCircle, screenNormal);
+          const horizontalScore = horizontalCircle.confidence * horizontalCircle.magnitude;
+          const screenScore = screenCircle.confidence * screenCircle.magnitude;
+          const chooseScreen = screenCircle.active
+            && (!horizontalCircle.active || screenScore > horizontalScore);
+          if (chooseScreen) {
+            state.motionCircleMode = "screen";
+            CircularMotionDetector.reset(state.motionCircle);
+            circle = screenCircle;
+            circleNormal = screenNormal;
+          } else if (horizontalCircle.active) {
+            state.motionCircleMode = "horizontal";
+            CircularMotionDetector.reset(state.motionScreenCircle);
+            circle = horizontalCircle;
+            circleNormal = gravityVector;
+          } else if (screenScore > horizontalScore) {
+            circle = screenCircle;
+            circleNormal = screenNormal;
+          } else {
+            circle = horizontalCircle;
+            circleNormal = gravityVector;
+          }
+        }
+
+        if (state.motionCircleMode && !circle.tracking && !circle.active) {
+          state.motionCircleMode = null;
+          CircularMotionDetector.reset(state.motionCircle);
+          CircularMotionDetector.reset(state.motionScreenCircle);
+        }
+
+        if (circle.tracking) {
+          state.motionWasTracking = true;
+          state.inputActiveUntil = now + 160;
+          const normalLength = Math.hypot(...circleNormal) || 1;
+          const gx = circleNormal[0] / normalLength;
+          const gy = circleNormal[1] / normalLength;
+          const gz = circleNormal[2] / normalLength;
+          const seed = Math.abs(gy) < 0.85 ? [0, 1, 0] : [0, 0, 1];
+          let ux = seed[1] * gz - seed[2] * gy;
+          let uy = seed[2] * gx - seed[0] * gz;
+          let uz = seed[0] * gy - seed[1] * gx;
+          const unitLength = Math.hypot(ux, uy, uz) || 1;
+          ux /= unitLength;
+          uy /= unitLength;
+          uz /= unitLength;
+          const vx = gy * uz - gz * uy;
+          const vy = gz * ux - gx * uz;
+          const vz = gx * uy - gy * ux;
+          const orbitX = -(circle.x * ux + circle.y * uy + circle.z * uz) / circle.magnitude * 7;
+          const orbitY = -(circle.x * vx + circle.y * vy + circle.z * vz) / circle.magnitude * 7;
+          state.motionTiltPending = {
+            x: orbitX,
+            y: orbitY,
+            tilt: circle.direction * 7,
+            track: circle.active ? circle.direction * 42 : 0
+          };
+          if (circle.degrees) {
+            state.motionInputPending += circle.degrees;
+            state.motionVelocityPending = clamp(circle.velocity / 60, -24, 24);
+            state.needs3DRender = true;
+            const plane = state.motionCircleMode === "screen" ? "正面" : "水平";
+            setText(motionMessage, `已锁定${plane}${circle.degrees > 0 ? "顺时针" : "逆时针"}圆周 · 继续画圆`);
+          } else if (!circle.active) {
+            setText(motionMessage, "已感应手腕轨迹 · 继续稳定画一个小圆…");
+          }
+          ensureAnimation();
+        } else if (state.motionWasTracking) {
+          state.motionWasTracking = false;
+          state.motionTiltPending = { x: 0, y: 0, tilt: 0, track: 0 };
+          setText(motionMessage, "体感已就绪 · 顺时针或逆时针再画一个小圆");
+          ensureAnimation();
         }
       }
 
@@ -3929,14 +4187,13 @@
 
           attachMotionListeners();
           scheduleMotionTimeout();
-          if (state.orientationPermissionGranted && state.deviceMotionPermissionGranted) {
-            motionMessage.textContent = "体感已就绪：顺逆转动手机，或轻晃续风。";
+          if (state.deviceMotionPermissionGranted) {
+            motionMessage.textContent = "传感器已连接：请先将手机短暂停稳，完成动作校准。";
+            setStatus("等待手机体感校准", true);
           } else if (state.orientationPermissionGranted) {
-            motionMessage.textContent = "手机旋转已就绪；如需晃动，请允许动作权限。";
-          } else {
-            motionMessage.textContent = "手机晃动已就绪；如需双向旋转，请允许方向权限。";
+            motionMessage.textContent = "动作权限未开启：可绕竖轴或正对屏幕顺逆转动。";
+            setStatus("手机方向感应已就绪", false);
           }
-          setStatus("手机体感已就绪", false);
         } catch (error) {
           if (requestId !== state.motionRequestId || state.mode !== "motion") return;
           motionMessage.textContent = "体感权限未开启，可在浏览器设置中允许后重试。";
@@ -3958,11 +4215,25 @@
         window.removeEventListener("orientationchange", calibrateMotion);
         state.motionListening = false;
         state.motionQuaternion = null;
-        state.motionGravity = null;
+        CircularMotionDetector.reset(state.motionCircle);
+        CircularMotionDetector.reset(state.motionScreenCircle);
+        state.motionCircleMode = null;
+        state.motionWasTracking = false;
         state.motionGravityBaseline = null;
+        state.motionGravityBaselineAt = 0;
+        state.motionSampleAt = 0;
+        state.lastValidDeviceMotionAt = 0;
+        state.motionCalibrationStableAt = 0;
+        state.motionCalibrationNoisePower = 0;
+        state.motionCalibrationSamples = 0;
+        state.motionCalibrated = false;
+        state.motionMagnitudeThreshold = 0.65;
         state.motionReceived = false;
         state.motionInputPending = 0;
+        state.motionVelocityPending = 0;
         state.motionTiltPending = null;
+        motionDevice.style.setProperty("--device-x", "0px");
+        motionDevice.style.setProperty("--device-y", "0px");
         motionDevice.style.setProperty("--device-tilt", "0deg");
         tiltIndicator.style.setProperty("--tilt-position", "0%");
       }
