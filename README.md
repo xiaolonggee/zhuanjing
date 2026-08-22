@@ -20,6 +20,11 @@ https://zhuanjing.xiaolongge.online
 - 握拳手势：对着摄像头握拳转
 - 手机：打开页面，用体感转
 
+
+## 友链
+
+- [LINUX DO](https://linux.do/)
+
 ## 许可
 
 MIT
