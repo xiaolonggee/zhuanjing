@@ -2659,10 +2659,10 @@
           const renderer = new THREE.WebGLRenderer({
             canvas: maniCanvas,
             alpha: true,
-            antialias: true,
+            antialias: !mobileBudget,
             powerPreference: "high-performance"
           });
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobileBudget ? 1 : 1.25));
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobileBudget ? 1.15 : 1.25));
           renderer.outputColorSpace = THREE.SRGBColorSpace;
           renderer.toneMapping = THREE.ACESFilmicToneMapping;
           renderer.toneMappingExposure = 1.18;
@@ -3453,9 +3453,11 @@
 
       function animate(now) {
         if (state.pointerSamples.length) processPointerSamples();
-        if (state.motionInputPending || state.motionTiltPending) processMotionInput();
         const frameScale = clamp((now - state.lastFrame) / 16.667, 0.2, 6);
         state.lastFrame = now;
+        if (state.motionInputPending || state.motionTiltPending) {
+          processMotionInput(frameScale, now);
+        }
 
         const gestureDriving = state.mode === "gesture"
           && state.gestureMachine.phase === GestureMachine.SPINNING
@@ -3838,6 +3840,7 @@
             -24,
             24
           );
+          state.inputActiveUntil = now + clamp(elapsed + 50, 80, 460);
           state.motionTiltPending = {
             x: 0,
             y: 0,
@@ -3851,12 +3854,9 @@
         }
       }
 
-      function processMotionInput() {
+      function processMotionInput(frameScale, now) {
         const degrees = state.motionInputPending;
-        const velocity = state.motionVelocityPending;
         const tilt = state.motionTiltPending;
-        state.motionInputPending = 0;
-        state.motionVelocityPending = 0;
         state.motionTiltPending = null;
         if (tilt) {
           motionDevice.style.setProperty("--device-x", `${tilt.x.toFixed(1)}px`);
@@ -3864,13 +3864,28 @@
           motionDevice.style.setProperty("--device-tilt", `${tilt.tilt.toFixed(1)}deg`);
           tiltIndicator.style.setProperty("--tilt-position", `${tilt.track.toFixed(1)}%`);
         }
-        if (!degrees) return;
-        commitRotation(degrees);
-        state.lastDirection = Math.sign(degrees);
-        state.velocity = clamp(velocity || degrees * 0.76, -24, 24);
-        state.inputActiveUntil = performance.now() + 160;
-        ensureAnimation();
-        setStatus(`手机${degrees > 0 ? "顺时针" : "逆时针"}画圆 · 经轮同步`, true);
+        if (Math.abs(degrees) < 0.0001) {
+          state.motionInputPending = 0;
+          state.motionVelocityPending = 0;
+          return;
+        }
+
+        const targetVelocity = state.motionVelocityPending || clamp(degrees * 0.76, -24, 24);
+        const frameBudget = Math.min(
+          24 * frameScale,
+          Math.max(0.35, Math.abs(targetVelocity) * 1.05) * frameScale
+        );
+        const step = Math.sign(degrees) * Math.min(Math.abs(degrees), frameBudget);
+        state.motionInputPending -= step;
+        if (Math.abs(state.motionInputPending) < 0.0001) {
+          state.motionInputPending = 0;
+          state.motionVelocityPending = 0;
+        }
+        commitRotation(step);
+        state.lastDirection = Math.sign(step);
+        state.velocity = clamp(Math.sign(step) * Math.abs(targetVelocity), -24, 24);
+        state.inputActiveUntil = Math.max(state.inputActiveUntil, now + 50);
+        setStatus(`手机${step > 0 ? "顺时针" : "逆时针"}画圆 · 经轮同步`, true);
       }
 
       function handleDeviceMotion(event) {
@@ -4035,7 +4050,6 @@
 
         if (circle.tracking) {
           state.motionWasTracking = true;
-          state.inputActiveUntil = now + 160;
           const normalLength = Math.hypot(...circleNormal) || 1;
           const gx = circleNormal[0] / normalLength;
           const gy = circleNormal[1] / normalLength;
