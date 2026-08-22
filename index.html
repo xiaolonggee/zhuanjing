@@ -1,0 +1,4732 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#271b2c">
+  <meta name="description" content="以鼠标、张掌握拳手势或手机体感驱动的 3D 数字玛尼轮艺术体验。">
+  <title>转境 · 数字玛尼轮</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Serif+Tibetan:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    @property --wheel-pitch {
+      syntax: "<angle>";
+      inherits: false;
+      initial-value: -3deg;
+    }
+
+    @property --wheel-yaw {
+      syntax: "<angle>";
+      inherits: false;
+      initial-value: 0deg;
+    }
+
+    @property --wheel-roll {
+      syntax: "<angle>";
+      inherits: false;
+      initial-value: -2deg;
+    }
+
+    :root {
+      --night-950: oklch(14% 0.045 298);
+      --night-900: oklch(19% 0.055 296);
+      --night-800: oklch(26% 0.07 291);
+      --ink: oklch(18% 0.035 47);
+      --paper: oklch(92% 0.055 82);
+      --paper-muted: oklch(78% 0.055 76);
+      --gold: oklch(80% 0.135 82);
+      --gold-deep: oklch(62% 0.145 66);
+      --saffron: oklch(72% 0.18 59);
+      --cinnabar: oklch(50% 0.19 29);
+      --cinnabar-deep: oklch(34% 0.13 25);
+      --turquoise: oklch(66% 0.105 194);
+      --line: oklch(82% 0.11 80 / 0.32);
+      --surface: oklch(19% 0.055 294 / 0.88);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-toggle: cubic-bezier(0.65, 0, 0.35, 1);
+      --space-1: 0.25rem;
+      --space-2: 0.5rem;
+      --space-3: 0.75rem;
+      --space-4: 1rem;
+      --space-6: 1.5rem;
+      --space-8: 2rem;
+      --space-12: 3rem;
+      --spin-energy: 0;
+      --scene-warmth: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      min-width: 20rem;
+      background: var(--night-950);
+    }
+
+    body {
+      min-height: 100svh;
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--paper);
+      background: var(--night-950);
+      font-family: "Noto Serif SC", "Songti SC", "STSong", serif;
+      font-size: 1rem;
+      line-height: 1.65;
+      font-kerning: normal;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button,
+    summary {
+      font: inherit;
+    }
+
+    button {
+      color: inherit;
+    }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: var(--space-3);
+      left: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      color: var(--ink);
+      background: var(--gold);
+      transform: translateY(-180%);
+      transition: transform 180ms var(--ease-out);
+    }
+
+    .skip-link:focus {
+      transform: translateY(0);
+    }
+
+    .app {
+      position: relative;
+      isolation: isolate;
+      min-height: 100svh;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 78% 20%, oklch(59% 0.16 48 / calc(0.12 + var(--scene-warmth) * 0.1)), transparent 23%),
+        linear-gradient(160deg, var(--night-800), var(--night-950) 70%);
+    }
+
+    .landscape {
+      position: absolute;
+      z-index: -5;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      min-height: 45rem;
+      opacity: 0.95;
+      pointer-events: none;
+    }
+
+    .landscape .sun-disc {
+      transform-box: fill-box;
+      transform-origin: center;
+      filter: saturate(calc(0.75 + var(--scene-warmth) * 0.6));
+      opacity: calc(0.5 + var(--scene-warmth) * 0.35);
+      transition: opacity 600ms var(--ease-out);
+    }
+
+    .landscape .far-mountains {
+      transform: translate3d(calc(var(--spin-energy) * -0.8rem), 0, 0);
+    }
+
+    .landscape .near-mountains {
+      transform: translate3d(calc(var(--spin-energy) * 1.2rem), 0, 0);
+    }
+
+    .landscape .far-mountains,
+    .landscape .near-mountains {
+      transition: transform 300ms var(--ease-out);
+    }
+
+    .sky-wash {
+      position: absolute;
+      z-index: -4;
+      inset: 0;
+      background: linear-gradient(180deg, oklch(48% 0.17 40 / calc(var(--scene-warmth) * 0.22)), transparent 52%);
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+
+    .grain {
+      position: absolute;
+      z-index: 20;
+      inset: -30%;
+      opacity: 0.13;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+
+    @keyframes grain-shift {
+      0% { transform: translate3d(-2%, 1%, 0); }
+      25% { transform: translate3d(3%, -2%, 0); }
+      50% { transform: translate3d(-1%, 3%, 0); }
+      75% { transform: translate3d(2%, 2%, 0); }
+      100% { transform: translate3d(-2%, 1%, 0); }
+    }
+
+    .prayer-line {
+      position: absolute;
+      z-index: 1;
+      top: clamp(5.25rem, 9vw, 8rem);
+      left: -3vw;
+      width: 72vw;
+      height: 5rem;
+      transform: rotate(-3deg);
+      transform-origin: left center;
+      pointer-events: none;
+    }
+
+    .prayer-line::before {
+      content: "";
+      position: absolute;
+      top: 0.35rem;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: oklch(82% 0.06 79 / 0.45);
+    }
+
+    .flag {
+      position: absolute;
+      top: 0.45rem;
+      left: calc(var(--i) * 8.7vw + 4vw);
+      width: clamp(2.25rem, 4vw, 4rem);
+      height: clamp(2.8rem, 5vw, 5rem);
+      background: var(--flag-color);
+      clip-path: polygon(0 0, 100% 3%, 88% 83%, 49% 100%, 12% 85%);
+      transform-origin: 50% 0;
+      opacity: 0.84;
+      box-shadow: inset 0 0 0 1px oklch(92% 0.03 80 / 0.14);
+      animation: flag-wave calc(3.8s - var(--spin-energy) * 1.7s) ease-in-out calc(var(--i) * -240ms) infinite alternate;
+    }
+
+    .flag::after {
+      content: "◇";
+      display: grid;
+      height: 74%;
+      place-items: center;
+      color: oklch(19% 0.045 45 / 0.42);
+      font-family: Georgia, serif;
+      font-size: clamp(0.9rem, 1.6vw, 1.35rem);
+    }
+
+    @keyframes flag-wave {
+      from { transform: rotateY(-16deg) skewY(-1deg); }
+      to { transform: rotateY(23deg) skewY(2deg); }
+    }
+
+    .topbar {
+      position: relative;
+      z-index: 30;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      min-height: 5.25rem;
+      padding: max(var(--space-4), env(safe-area-inset-top)) clamp(var(--space-4), 3.3vw, var(--space-12)) var(--space-4);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-3);
+      width: max-content;
+      color: var(--paper);
+      text-decoration: none;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 2.5rem;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+      color: var(--gold);
+      font-family: Georgia, serif;
+      font-size: 1.2rem;
+      line-height: 1;
+      transform: rotate(-8deg);
+    }
+
+    .brand-text {
+      display: grid;
+      line-height: 1.1;
+    }
+
+    .brand-text strong {
+      font-size: 0.95rem;
+      letter-spacing: 0.25em;
+    }
+
+    .brand-text small {
+      margin-top: 0.28rem;
+      color: var(--paper-muted);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.56rem;
+      letter-spacing: 0.17em;
+    }
+
+    .mode-switch {
+      display: flex;
+      gap: var(--space-1);
+      padding: 0.25rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: oklch(16% 0.045 296 / 0.66);
+    }
+
+    .mode-button,
+    .sound-button {
+      min-height: 2.75rem;
+      border: 0;
+      cursor: pointer;
+      transition: color 160ms var(--ease-out), background-color 160ms var(--ease-out), transform 120ms var(--ease-out);
+    }
+
+    .mode-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.55rem var(--space-4);
+      border-radius: 999px;
+      color: var(--paper-muted);
+      background: transparent;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .mode-button[aria-pressed="true"] {
+      color: var(--ink);
+      background: var(--gold);
+    }
+
+    .mode-button:hover:not([aria-pressed="true"]),
+    .sound-button:hover {
+      color: var(--gold);
+      background: oklch(80% 0.12 82 / 0.09);
+    }
+
+    .mode-button:active,
+    .sound-button:active {
+      transform: scale(0.96);
+    }
+
+    .mode-button:focus-visible,
+    .sound-button:focus-visible,
+    summary:focus-visible,
+    .stage:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px;
+    }
+
+    .mode-icon {
+      width: 1rem;
+      height: 1rem;
+      flex: none;
+    }
+
+    .sound-wrap {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .sound-button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: 0.55rem var(--space-3);
+      color: var(--paper-muted);
+      background: transparent;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+    }
+
+    .sound-button::before {
+      content: "";
+      width: 0.5rem;
+      aspect-ratio: 1;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      background: transparent;
+    }
+
+    .sound-button[aria-pressed="true"] {
+      color: var(--gold);
+    }
+
+    .sound-button[aria-pressed="true"]::before {
+      background: currentColor;
+      box-shadow: 0 0 0 4px oklch(80% 0.13 82 / 0.12);
+    }
+
+    .main-grid {
+      position: relative;
+      z-index: 3;
+      display: grid;
+      grid-template-columns: minmax(14rem, 0.85fr) minmax(23rem, 1.35fr) minmax(14rem, 0.75fr);
+      grid-template-areas: "intro stage telemetry";
+      align-items: center;
+      gap: clamp(var(--space-4), 2.2vw, var(--space-8));
+      width: min(100%, 105rem);
+      min-height: calc(100svh - 9rem);
+      margin: 0 auto;
+      padding: clamp(var(--space-6), 4vw, var(--space-12)) clamp(var(--space-4), 3.3vw, var(--space-12)) max(5rem, env(safe-area-inset-bottom));
+    }
+
+    .intro {
+      grid-area: intro;
+      align-self: center;
+      max-width: 27rem;
+      animation: enter-left 760ms var(--ease-out) both;
+    }
+
+    @keyframes enter-left {
+      from { opacity: 0; transform: translate3d(-1.5rem, 0, 0); }
+      to { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin: 0 0 var(--space-4);
+      color: var(--gold);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: clamp(0.58rem, 0.7vw, 0.7rem);
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 2.25rem;
+      height: 1px;
+      background: currentColor;
+    }
+
+    h1 {
+      max-width: 8ch;
+      margin: 0;
+      color: var(--paper);
+      font-size: clamp(2.65rem, 5vw, 6.4rem);
+      font-weight: 900;
+      line-height: 0.98;
+      letter-spacing: -0.055em;
+      text-wrap: balance;
+    }
+
+    h1 em {
+      display: block;
+      margin-top: 0.15em;
+      color: var(--gold);
+      font-style: normal;
+      font-weight: 600;
+    }
+
+    .intro-copy {
+      max-width: 24rem;
+      margin: var(--space-6) 0 0;
+      color: var(--paper-muted);
+      font-size: clamp(0.88rem, 1vw, 1rem);
+      line-height: 1.9;
+    }
+
+    .mantra-line {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-6);
+      color: var(--paper);
+      font-family: "Noto Serif Tibetan", "Kailasa", "Tibetan Machine Uni", serif;
+      font-size: clamp(1rem, 1.5vw, 1.35rem);
+      line-height: 1.4;
+    }
+
+    .mantra-line::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--line), transparent);
+    }
+
+    .culture-note {
+      margin-top: var(--space-8);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .culture-note summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 3.5rem;
+      color: var(--paper-muted);
+      cursor: pointer;
+      list-style: none;
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+    }
+
+    .culture-note summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .culture-note summary::after {
+      content: "+";
+      color: var(--gold);
+      font-family: ui-monospace, monospace;
+      font-size: 1rem;
+      transition: transform 240ms var(--ease-toggle);
+    }
+
+    .culture-note[open] summary::after {
+      transform: rotate(45deg);
+    }
+
+    .culture-body {
+      display: grid;
+      grid-template-rows: 0fr;
+    }
+
+    .culture-note[open] .culture-body {
+      grid-template-rows: 1fr;
+    }
+
+    .culture-body > div {
+      overflow: hidden;
+    }
+
+    .culture-body p {
+      margin: 0 0 var(--space-4);
+      color: var(--paper-muted);
+      font-size: 0.75rem;
+      line-height: 1.8;
+    }
+
+    .stage-wrap {
+      grid-area: stage;
+      position: relative;
+      display: grid;
+      min-height: clamp(32rem, 72svh, 51rem);
+      place-items: center;
+      perspective: 72rem;
+      animation: stage-enter 900ms 100ms var(--ease-out) both;
+    }
+
+    @keyframes stage-enter {
+      from { opacity: 0; transform: translate3d(0, 1.75rem, 0) scale(0.97); }
+      to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    .stage {
+      position: relative;
+      display: grid;
+      width: min(100%, 42rem);
+      height: clamp(32rem, 72svh, 51rem);
+      place-items: center;
+      border: 0;
+      border-radius: 45% 45% 12% 12%;
+      outline: none;
+      cursor: crosshair;
+      touch-action: pan-y;
+      user-select: none;
+    }
+
+    .stage::before,
+    .stage::after {
+      content: "";
+      position: absolute;
+      inset: 50% auto auto 50%;
+      border: 1px solid oklch(80% 0.12 82 / 0.24);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .stage::before {
+      width: min(38rem, 92%);
+      aspect-ratio: 1;
+      background:
+        repeating-conic-gradient(from 2deg, oklch(80% 0.13 82 / 0.31) 0 0.7deg, transparent 0.7deg 7.5deg);
+      mask-image: radial-gradient(circle, transparent 58%, #111 58.4% 59.4%, transparent 60% 68%, #111 68.5% 69.2%, transparent 69.8%);
+      animation: dial-turn 24s linear infinite;
+    }
+
+    .stage::after {
+      width: min(29rem, 70%);
+      aspect-ratio: 1;
+      border-style: dashed;
+      opacity: calc(0.35 + var(--spin-energy) * 0.6);
+      animation: dial-turn calc(18s - var(--spin-energy) * 12s) linear infinite reverse;
+    }
+
+    .flag,
+    .stage::before,
+    .stage::after {
+      animation-play-state: paused;
+    }
+
+    .app.is-spinning .flag {
+      animation-play-state: running;
+    }
+
+    @keyframes dial-turn {
+      to { transform: translate(-50%, -50%) rotate(1turn); }
+    }
+
+    .orbit-label {
+      position: absolute;
+      z-index: 2;
+      top: 16%;
+      left: 50%;
+      color: oklch(86% 0.08 79 / 0.58);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.55rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+
+    .mantra-field {
+      position: absolute;
+      z-index: 4;
+      inset: 1% -10% 2%;
+      overflow: hidden;
+      contain: strict;
+      pointer-events: none;
+      -webkit-mask-image: radial-gradient(ellipse 88% 96% at 50% 44%, #000 0 74%, transparent 100%);
+      mask-image: radial-gradient(ellipse 88% 96% at 50% 44%, #000 0 74%, transparent 100%);
+    }
+
+    .mantra-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      opacity: 0.98;
+      transform: translateZ(0);
+    }
+
+    @media (max-width: 46rem) {
+      .mantra-field {
+        inset-inline: -2%;
+      }
+    }
+
+    .wheel-assembly {
+      position: relative;
+      z-index: 5;
+      width: clamp(15.5rem, 28vw, 20.5rem);
+      height: clamp(27rem, 58svh, 39rem);
+      transform-style: preserve-3d;
+      transform: rotateX(var(--wheel-pitch, -3deg)) rotateY(var(--wheel-yaw, 0deg)) rotateZ(var(--wheel-roll, -2deg));
+      transition: transform 220ms var(--ease-out);
+    }
+
+    .mani-canvas {
+      position: absolute;
+      z-index: 3;
+      top: 0;
+      left: -38%;
+      width: 176%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 520ms var(--ease-out);
+    }
+
+    .wheel-assembly.webgl-ready .mani-canvas {
+      opacity: 1;
+    }
+
+    .css-wheel-fallback {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      filter: drop-shadow(0 2rem 2rem oklch(9% 0.03 297 / 0.58));
+      transition: opacity 420ms var(--ease-out);
+    }
+
+    .wheel-assembly.webgl-ready .css-wheel-fallback {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 420ms var(--ease-out), visibility 0s linear 420ms;
+    }
+
+    .pole {
+      position: absolute;
+      z-index: -1;
+      top: 2%;
+      bottom: 0;
+      left: 50%;
+      width: 1.3rem;
+      border: 1px solid oklch(81% 0.13 77 / 0.68);
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, var(--cinnabar-deep), var(--gold-deep) 34%, var(--gold) 50%, var(--gold-deep) 66%, var(--cinnabar-deep));
+      transform: translateX(-50%);
+      box-shadow: inset 0 0 0 0.18rem oklch(28% 0.1 37 / 0.55);
+    }
+
+    .finial {
+      position: absolute;
+      z-index: 7;
+      top: 0;
+      left: 50%;
+      width: 4.6rem;
+      height: 4.9rem;
+      transform: translate(-50%, -25%);
+    }
+
+    .finial::before,
+    .finial::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%) rotate(45deg);
+    }
+
+    .finial::before {
+      top: 0.2rem;
+      width: 2.2rem;
+      aspect-ratio: 1;
+      border: 1px solid var(--gold);
+      background: radial-gradient(circle at 30% 30%, var(--turquoise), oklch(35% 0.1 196) 62%);
+      box-shadow: 0 0 0 0.32rem oklch(37% 0.13 31), 0 0 0 0.42rem var(--gold-deep);
+    }
+
+    .finial::after {
+      bottom: 0.1rem;
+      width: 3.8rem;
+      height: 1.5rem;
+      border: 1px solid var(--gold);
+      background: linear-gradient(135deg, var(--cinnabar-deep), var(--cinnabar));
+    }
+
+    .drum-shell {
+      position: absolute;
+      z-index: 6;
+      top: 18%;
+      left: 50%;
+      width: 100%;
+      height: 36%;
+      transform: translateX(-50%);
+      transform-style: preserve-3d;
+    }
+
+    .drum-rotor {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transform: rotateY(0deg);
+    }
+
+    .drum-panel {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: var(--panel-width);
+      height: 100%;
+      margin-left: calc(var(--panel-width) / -2);
+      overflow: hidden;
+      border-top: 1px solid oklch(89% 0.12 82 / 0.64);
+      border-bottom: 1px solid oklch(89% 0.12 82 / 0.55);
+      background:
+        linear-gradient(180deg,
+          var(--gold-deep) 0 3%,
+          var(--gold) 3% 5%,
+          var(--cinnabar-deep) 5% 14%,
+          var(--saffron) 14% 16%,
+          var(--cinnabar) 16% 40%,
+          var(--cinnabar-deep) 40% 41%,
+          var(--gold) 41% 43%,
+          var(--cinnabar-deep) 43% 64%,
+          var(--cinnabar) 64% 84%,
+          var(--saffron) 84% 86%,
+          var(--cinnabar-deep) 86% 95%,
+          var(--gold) 95% 97%,
+          var(--gold-deep) 97% 100%);
+      transform: rotateY(var(--panel-angle)) translateZ(var(--drum-radius));
+      backface-visibility: hidden;
+    }
+
+    .drum-panel:nth-child(3n + 1) {
+      background-color: oklch(45% 0.17 27);
+      filter: brightness(0.93);
+    }
+
+    .panel-glyph {
+      position: absolute;
+      top: 35%;
+      left: 50%;
+      display: grid;
+      width: 115%;
+      place-items: center;
+      color: var(--gold);
+      font-family: Georgia, serif;
+      font-size: clamp(1.1rem, 2vw, 1.7rem);
+      line-height: 1;
+      text-shadow: 0 1px 0 var(--cinnabar-deep);
+      transform: translate(-50%, -50%);
+    }
+
+    .panel-gem {
+      position: absolute;
+      top: 57%;
+      left: 50%;
+      width: 72%;
+      height: 21%;
+      border: 1px solid oklch(86% 0.13 82 / 0.82);
+      border-radius: 16% 16% 22% 22%;
+      background:
+        radial-gradient(circle at 34% 22%, oklch(88% 0.05 188 / 0.68), transparent 22%),
+        linear-gradient(135deg, oklch(70% 0.13 190), oklch(42% 0.12 193));
+      box-shadow: 0 0 0 0.12rem var(--gold-deep), inset 0 0 0.3rem oklch(25% 0.09 195 / 0.54);
+      transform: translateX(-50%);
+    }
+
+    .panel-stitch {
+      position: absolute;
+      top: 25%;
+      left: 50%;
+      width: 0.28rem;
+      height: 0.28rem;
+      border: 1px solid oklch(89% 0.13 81 / 0.7);
+      transform: translateX(-50%) rotate(45deg);
+    }
+
+    .drum-light {
+      position: absolute;
+      z-index: 8;
+      inset: -1% -4%;
+      border-radius: 47% / 8%;
+      background:
+        linear-gradient(90deg,
+          oklch(12% 0.05 25 / 0.82),
+          transparent 20%,
+          oklch(97% 0.07 84 / 0.28) 46%,
+          transparent 66%,
+          oklch(11% 0.045 24 / 0.88));
+      mix-blend-mode: multiply;
+      pointer-events: none;
+    }
+
+    .drum-light::after {
+      content: "";
+      position: absolute;
+      inset: 42% 0 35%;
+      border-top: 1px solid oklch(89% 0.13 82 / 0.72);
+      border-bottom: 1px solid oklch(89% 0.13 82 / 0.5);
+      background: linear-gradient(90deg, var(--cinnabar-deep), oklch(44% 0.17 27 / 0.65), var(--cinnabar-deep));
+      mix-blend-mode: normal;
+      opacity: 0.42;
+    }
+
+    .drum-cap {
+      position: absolute;
+      z-index: 10;
+      left: 50%;
+      width: 106%;
+      height: 8.5%;
+      border: 1px solid var(--gold-deep);
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse at center, var(--cinnabar-deep) 0 22%, transparent 23%),
+        radial-gradient(ellipse at center, var(--gold) 0 7%, var(--gold-deep) 31%, var(--cinnabar-deep) 65%, var(--gold-deep) 91%);
+      transform: translateX(-50%);
+      box-shadow: inset 0 0.18rem 0 oklch(91% 0.11 82 / 0.48);
+    }
+
+    .drum-cap.top {
+      top: -4.2%;
+    }
+
+    .drum-cap.bottom {
+      bottom: -4.2%;
+      filter: brightness(0.64);
+    }
+
+    .neck-rings {
+      position: absolute;
+      z-index: 8;
+      top: 9.5%;
+      left: 50%;
+      width: 38%;
+      height: 10%;
+      border-top: 0.55rem double var(--gold-deep);
+      border-bottom: 0.55rem double var(--gold-deep);
+      background: linear-gradient(90deg, var(--cinnabar-deep), var(--cinnabar), var(--cinnabar-deep));
+      transform: translateX(-50%);
+      clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
+    }
+
+    .base {
+      position: absolute;
+      z-index: 8;
+      bottom: 0.5%;
+      left: 50%;
+      width: 13%;
+      height: 43%;
+      border: 1px solid var(--gold-deep);
+      border-radius: 18% 18% 42% 42%;
+      background:
+        repeating-linear-gradient(180deg, transparent 0 0.65rem, oklch(85% 0.12 81 / 0.5) 0.68rem 0.76rem),
+        linear-gradient(90deg, var(--cinnabar-deep), var(--gold-deep) 34%, var(--gold) 50%, var(--gold-deep) 66%, var(--cinnabar-deep));
+      transform: translateX(-50%);
+      box-shadow: inset 0.18rem 0 0.35rem oklch(18% 0.05 35 / 0.65), inset -0.18rem 0 0.35rem oklch(18% 0.05 35 / 0.65);
+    }
+
+    .base::before,
+    .base::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      border: 1px solid var(--gold-deep);
+      transform: translateX(-50%);
+    }
+
+    .base::before {
+      top: -3%;
+      width: 190%;
+      height: 13%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse at center, var(--gold) 0 22%, var(--cinnabar-deep) 48%, var(--gold-deep) 88%);
+    }
+
+    .base::after {
+      bottom: -2%;
+      width: 64%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, oklch(79% 0.08 189), var(--turquoise) 45%, oklch(28% 0.1 194) 72%);
+      box-shadow: 0 0 0 0.16rem var(--gold-deep);
+    }
+
+    .fallback-counterweight {
+      position: absolute;
+      z-index: 9;
+      top: 36%;
+      left: 50%;
+      width: 155%;
+      overflow: visible;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: opacity 120ms linear;
+    }
+
+    .fallback-counterweight.is-behind {
+      z-index: 4;
+      opacity: 0.68;
+    }
+
+    .fallback-chain {
+      fill: none;
+      stroke: oklch(52% 0.06 68);
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-dasharray: 4 10;
+      filter: drop-shadow(0 2px 2px oklch(10% 0.03 34 / 0.7));
+    }
+
+    .fallback-ball {
+      fill: var(--turquoise);
+      stroke: var(--gold-deep);
+      stroke-width: 8;
+      filter: drop-shadow(0 5px 6px oklch(8% 0.03 40 / 0.72));
+    }
+
+    .stage-instruction {
+      position: absolute;
+      z-index: 15;
+      bottom: 3.5%;
+      left: 50%;
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      color: var(--paper-muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      transform: translateX(-50%);
+      white-space: nowrap;
+      transition: color 180ms var(--ease-out), opacity 180ms var(--ease-out);
+    }
+
+    .stage-instruction svg {
+      width: 2.1rem;
+      color: var(--gold);
+    }
+
+    .app.is-spinning .stage-instruction {
+      color: var(--gold);
+      opacity: 0.7;
+    }
+
+    .telemetry {
+      grid-area: telemetry;
+      align-self: center;
+      animation: enter-right 760ms 180ms var(--ease-out) both;
+    }
+
+    @keyframes enter-right {
+      from { opacity: 0; transform: translate3d(1.5rem, 0, 0); }
+      to { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-bottom: var(--space-8);
+      color: var(--paper-muted);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.62rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 0.55rem;
+      aspect-ratio: 1;
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+    }
+
+    .status-dot.active {
+      background: var(--gold);
+      box-shadow: 0 0 0 0.35rem oklch(80% 0.13 82 / 0.12);
+      animation: status-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes status-pulse {
+      50% { opacity: 0.46; }
+    }
+
+    .turn-readout {
+      position: relative;
+      padding: var(--space-6) 0 var(--space-8);
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .turn-label {
+      color: var(--paper-muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+    }
+
+    .turn-value {
+      display: flex;
+      align-items: baseline;
+      gap: var(--space-3);
+      margin-top: var(--space-2);
+    }
+
+    .turn-value strong {
+      color: var(--gold);
+      font-family: "Noto Serif SC", serif;
+      font-size: clamp(3rem, 4.5vw, 5.2rem);
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+      letter-spacing: -0.06em;
+    }
+
+    .turn-value span {
+      color: var(--paper-muted);
+      font-size: 0.8rem;
+    }
+
+    .phase {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: var(--space-2) var(--space-4);
+      margin-top: var(--space-6);
+    }
+
+    .phase-label,
+    .phase-name {
+      margin: 0;
+    }
+
+    .phase-label {
+      color: var(--paper-muted);
+      font-size: 0.67rem;
+      letter-spacing: 0.13em;
+    }
+
+    .phase-name {
+      color: var(--paper);
+      font-size: 0.78rem;
+      text-align: right;
+    }
+
+    .wind-track {
+      grid-column: 1 / -1;
+      position: relative;
+      height: 2px;
+      margin-top: var(--space-2);
+      overflow: hidden;
+      background: oklch(80% 0.09 80 / 0.18);
+    }
+
+    .wind-fill {
+      position: absolute;
+      inset: 0;
+      background: var(--gold);
+      transform: scaleX(0.04);
+      transform-origin: left;
+      transition: transform 160ms var(--ease-out);
+    }
+
+    .camera-panel {
+      display: none;
+      margin-top: var(--space-6);
+      animation: camera-enter 360ms var(--ease-out) both;
+    }
+
+    .camera-panel.visible {
+      display: block;
+    }
+
+    @keyframes camera-enter {
+      from { opacity: 0; transform: translate3d(0, 0.75rem, 0); }
+      to { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+
+    .camera-frame {
+      position: relative;
+      overflow: hidden;
+      aspect-ratio: 4 / 3;
+      border: 1px solid var(--line);
+      contain: layout paint;
+      isolation: isolate;
+      background:
+        linear-gradient(90deg, transparent 49.7%, oklch(80% 0.12 82 / 0.16) 50%, transparent 50.3%),
+        linear-gradient(0deg, transparent 49.7%, oklch(80% 0.12 82 / 0.16) 50%, transparent 50.3%),
+        var(--surface);
+      box-shadow: 0 1.25rem 3rem oklch(8% 0.03 296 / 0.34);
+      transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+    }
+
+    .camera-frame[data-ar-state="armed"] {
+      border-color: oklch(80% 0.13 82 / 0.62);
+    }
+
+    .camera-frame[data-ar-state="spinning"] {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 1px oklch(80% 0.13 82 / 0.24), 0 1.4rem 3.2rem oklch(8% 0.03 296 / 0.42);
+    }
+
+    .camera-frame::before,
+    .camera-frame::after {
+      content: "";
+      position: absolute;
+      z-index: 5;
+      width: 1.25rem;
+      height: 1.25rem;
+      border-color: var(--gold);
+      border-style: solid;
+      pointer-events: none;
+    }
+
+    .camera-frame::before {
+      top: 0.65rem;
+      left: 0.65rem;
+      border-width: 1px 0 0 1px;
+    }
+
+    .camera-frame::after {
+      right: 0.65rem;
+      bottom: 0.65rem;
+      border-width: 0 1px 1px 0;
+    }
+
+    #camera,
+    #hand-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #camera {
+      opacity: 0;
+      transition: opacity 300ms var(--ease-out);
+    }
+
+    #camera.ready {
+      opacity: 0.84;
+    }
+
+    #hand-overlay {
+      z-index: 2;
+      contain: paint;
+      pointer-events: none;
+      transform: none;
+    }
+
+    .gesture-phase-badge {
+      position: absolute;
+      z-index: 3;
+      top: 0.75rem;
+      left: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      max-width: calc(100% - 1.5rem);
+      padding: 0.38rem 0.65rem;
+      border: 1px solid oklch(80% 0.13 82 / 0.34);
+      color: var(--paper);
+      background: oklch(15% 0.045 296 / 0.78);
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      backdrop-filter: blur(0.35rem);
+    }
+
+    .gesture-phase-badge i {
+      width: 0.42rem;
+      aspect-ratio: 1;
+      flex: none;
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+    }
+
+    .camera-frame[data-ar-state="armed"] .gesture-phase-badge i,
+    .camera-frame[data-ar-state="spinning"] .gesture-phase-badge i {
+      background: var(--gold);
+    }
+
+    .camera-loading {
+      position: absolute;
+      z-index: 4;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      color: var(--paper-muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-align: center;
+      transition: opacity 180ms var(--ease-out);
+    }
+
+    .camera-loading.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-ring {
+      width: 2.25rem;
+      aspect-ratio: 1;
+      margin: 0 auto;
+      border: 1px solid oklch(80% 0.12 82 / 0.25);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: dial-turn 900ms linear infinite;
+    }
+
+    .gesture-guide {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-3);
+      color: var(--paper-muted);
+      font-size: 0.68rem;
+      line-height: 1.6;
+    }
+
+    .app.gesture-active .main-grid {
+      grid-template-columns: minmax(13rem, 0.68fr) minmax(23rem, 1.08fr) minmax(20rem, 1fr);
+    }
+
+    .app.gesture-active .telemetry {
+      display: flex;
+      flex-direction: column;
+      align-self: center;
+    }
+
+    .app.gesture-active .status-line { order: 0; }
+    .app.gesture-active .camera-panel {
+      order: 1;
+      width: 100%;
+      max-width: 26rem;
+      margin: 0 0 var(--space-4);
+    }
+    .app.gesture-active .turn-readout { order: 2; }
+    .app.gesture-active .micro-meta { order: 3; }
+
+    .app.gesture-active .grain {
+      display: none;
+    }
+
+    .app.gesture-active .gesture-phase-badge {
+      backdrop-filter: none;
+    }
+
+    .app.gesture-active .flag {
+      animation-play-state: paused;
+    }
+
+    .gesture-guide svg {
+      width: 2rem;
+      flex: none;
+      color: var(--gold);
+    }
+
+    .camera-privacy {
+      display: block;
+      margin-top: var(--space-3);
+      color: oklch(78% 0.05 78 / 0.72);
+      font-size: 0.58rem;
+      line-height: 1.6;
+    }
+
+    .motion-panel {
+      display: none;
+      margin-top: var(--space-6);
+      padding: var(--space-6) 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      animation: camera-enter 360ms var(--ease-out) both;
+    }
+
+    .motion-panel.visible {
+      display: grid;
+      grid-template-columns: 4.25rem 1fr;
+      gap: var(--space-4);
+      align-items: center;
+    }
+
+    .motion-device {
+      position: relative;
+      display: grid;
+      width: 2.75rem;
+      height: 4.5rem;
+      margin: 0 auto;
+      place-items: center;
+      border: 1px solid var(--gold);
+      border-radius: 0.65rem;
+      color: var(--gold);
+      transform: rotate(var(--device-tilt, 0deg));
+      transition: transform 100ms linear;
+    }
+
+    .motion-device::before {
+      content: "";
+      position: absolute;
+      top: 0.28rem;
+      left: 50%;
+      width: 0.85rem;
+      height: 1px;
+      background: currentColor;
+      transform: translateX(-50%);
+    }
+
+    .motion-device::after {
+      content: "";
+      width: 1.4rem;
+      aspect-ratio: 1;
+      border: 1px dashed currentColor;
+      border-radius: 50%;
+      opacity: 0.62;
+    }
+
+    .motion-copy strong,
+    .motion-copy small {
+      display: block;
+    }
+
+    .motion-copy strong {
+      color: var(--paper);
+      font-size: 0.75rem;
+      font-weight: 400;
+      line-height: 1.7;
+    }
+
+    .motion-copy small {
+      margin-top: var(--space-2);
+      color: var(--paper-muted);
+      font-size: 0.58rem;
+      line-height: 1.6;
+    }
+
+    .tilt-track {
+      position: relative;
+      height: 1px;
+      margin-top: var(--space-4);
+      background: oklch(80% 0.09 80 / 0.24);
+    }
+
+    .tilt-track::before {
+      content: "";
+      position: absolute;
+      top: -0.25rem;
+      left: 50%;
+      width: 1px;
+      height: 0.55rem;
+      background: var(--paper-muted);
+    }
+
+    .tilt-indicator {
+      position: absolute;
+      top: 50%;
+      left: calc(50% + var(--tilt-position, 0%));
+      width: 0.55rem;
+      aspect-ratio: 1;
+      border: 1px solid var(--gold);
+      border-radius: 50%;
+      background: var(--night-900);
+      transform: translate(-50%, -50%);
+      transition: left 100ms linear;
+    }
+
+    .micro-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+      margin-top: var(--space-8);
+    }
+
+    .micro-meta div {
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--line);
+    }
+
+    .micro-meta small,
+    .micro-meta strong {
+      display: block;
+    }
+
+    .micro-meta small {
+      color: var(--paper-muted);
+      font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+      font-size: 0.54rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .micro-meta strong {
+      margin-top: var(--space-1);
+      color: var(--paper);
+      font-size: 0.72rem;
+      font-weight: 400;
+    }
+
+    .footer-note {
+      position: absolute;
+      z-index: 5;
+      right: clamp(var(--space-4), 3.3vw, var(--space-12));
+      bottom: max(var(--space-4), env(safe-area-inset-bottom));
+      margin: 0;
+      color: oklch(78% 0.05 78 / 0.64);
+      font-size: 0.58rem;
+      letter-spacing: 0.08em;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 80;
+      left: 50%;
+      bottom: max(var(--space-6), env(safe-area-inset-bottom));
+      max-width: min(30rem, calc(100vw - 2rem));
+      padding: var(--space-3) var(--space-6);
+      border: 1px solid var(--gold-deep);
+      color: var(--ink);
+      background: var(--gold);
+      font-size: 0.75rem;
+      text-align: center;
+      transform: translate(-50%, 5rem);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 300ms var(--ease-out), opacity 200ms var(--ease-out);
+    }
+
+    .toast.visible {
+      transform: translate(-50%, 0);
+      opacity: 1;
+    }
+
+    @media (max-width: 70rem) {
+      .main-grid {
+        grid-template-columns: minmax(13rem, 0.72fr) minmax(21rem, 1.15fr);
+        grid-template-areas:
+          "intro stage"
+          "telemetry stage";
+      }
+
+      .intro {
+        align-self: end;
+      }
+
+      h1 {
+        font-size: clamp(2.8rem, 6vw, 5.5rem);
+      }
+
+      .culture-note,
+      .micro-meta {
+        display: none;
+      }
+
+      .telemetry {
+        align-self: start;
+      }
+
+      .status-line {
+        margin-bottom: var(--space-4);
+      }
+
+      .turn-readout {
+        padding: var(--space-4) 0;
+      }
+
+      .camera-panel {
+        max-width: 17rem;
+      }
+
+      .app.gesture-active .main-grid {
+        grid-template-columns: minmax(19rem, 0.88fr) minmax(23rem, 1.12fr);
+        grid-template-areas:
+          "telemetry stage"
+          "intro stage";
+      }
+
+      .app.gesture-active .camera-panel {
+        max-width: 22rem;
+      }
+    }
+
+    @media (max-width: 46rem) {
+      .topbar {
+        grid-template-columns: 1fr auto;
+        padding-inline: var(--space-4);
+      }
+
+      .brand-text small,
+      .sound-button span {
+        display: none;
+      }
+
+      .sound-wrap {
+        position: absolute;
+        top: 0.85rem;
+        right: var(--space-4);
+      }
+
+      .sound-button {
+        width: 2.75rem;
+        justify-content: center;
+      }
+
+      .mode-switch {
+        position: fixed;
+        z-index: 45;
+        right: 50%;
+        bottom: max(var(--space-4), env(safe-area-inset-bottom));
+        width: min(calc(100vw - 2rem), 23rem);
+        border-color: oklch(82% 0.1 80 / 0.52);
+        background: oklch(17% 0.055 296 / 0.96);
+        transform: translateX(50%);
+        box-shadow: 0 0.8rem 2.4rem oklch(8% 0.03 296 / 0.46);
+      }
+
+      .mode-button {
+        flex: 1;
+        justify-content: center;
+        gap: 0.35rem;
+        padding-inline: 0.45rem;
+        font-size: 0.64rem;
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "intro"
+          "stage"
+          "telemetry";
+        gap: 0;
+        min-height: auto;
+        padding: var(--space-6) var(--space-4) 7rem;
+      }
+
+      .app.gesture-active .main-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "telemetry"
+          "stage";
+      }
+
+      .app.gesture-active .intro {
+        display: none;
+      }
+
+      .intro {
+        width: 100%;
+        max-width: none;
+      }
+
+      .eyebrow {
+        margin-bottom: var(--space-3);
+      }
+
+      h1 {
+        max-width: 9ch;
+        font-size: clamp(2.8rem, 14vw, 4.7rem);
+      }
+
+      .intro-copy {
+        max-width: 31rem;
+        margin-top: var(--space-4);
+        font-size: 0.82rem;
+      }
+
+      .mantra-line {
+        margin-top: var(--space-4);
+      }
+
+      .culture-note {
+        display: block;
+        margin-top: var(--space-6);
+      }
+
+      .stage-wrap,
+      .stage {
+        min-height: 34rem;
+        height: 72svh;
+        max-height: 44rem;
+      }
+
+      .wheel-assembly {
+        width: clamp(14.5rem, 68vw, 19rem);
+        height: clamp(27rem, 64svh, 35rem);
+      }
+
+      .telemetry {
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+        margin-top: var(--space-6);
+      }
+
+      .turn-readout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-4);
+        align-items: center;
+      }
+
+      .phase {
+        margin-top: 0;
+      }
+
+      .camera-panel {
+        max-width: none;
+      }
+
+      .micro-meta {
+        display: grid;
+      }
+
+      .footer-note {
+        position: relative;
+        right: auto;
+        bottom: auto;
+        padding: 0 var(--space-4) 7rem;
+        text-align: center;
+      }
+
+      .prayer-line {
+        top: 5.1rem;
+        width: 115vw;
+        opacity: 0.72;
+      }
+
+      .flag {
+        left: calc(var(--i) * 13.5vw + 3vw);
+      }
+    }
+
+    @media (pointer: coarse) {
+      .grain {
+        display: none;
+      }
+
+      .gesture-phase-badge {
+        backdrop-filter: none;
+      }
+
+      .mode-button {
+        min-height: 3rem;
+        padding-inline: 1rem;
+      }
+    }
+
+    @media (pointer: coarse) and (max-width: 46rem) {
+      .mode-button {
+        padding-inline: 0.35rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+
+      .grain {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主要体验</a>
+
+  <div class="app" id="app">
+    <svg class="landscape" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2a203f"/>
+          <stop offset="0.48" stop-color="#51405c"/>
+          <stop offset="1" stop-color="#a0564b"/>
+        </linearGradient>
+        <radialGradient id="sunGlow">
+          <stop offset="0" stop-color="#f5d385" stop-opacity="0.95"/>
+          <stop offset="0.35" stop-color="#d98959" stop-opacity="0.45"/>
+          <stop offset="1" stop-color="#d98959" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="farPeak" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#6e6379"/>
+          <stop offset="1" stop-color="#393147"/>
+        </linearGradient>
+        <linearGradient id="nearPeak" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#392c42"/>
+          <stop offset="1" stop-color="#191827"/>
+        </linearGradient>
+        <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#22202f"/>
+          <stop offset="1" stop-color="#12131e"/>
+        </linearGradient>
+        <filter id="soften">
+          <feGaussianBlur stdDeviation="18"/>
+        </filter>
+      </defs>
+
+      <rect width="1600" height="900" fill="url(#sky)"/>
+      <g opacity="0.36" fill="#e8d9b0">
+        <circle cx="122" cy="108" r="1.4"/><circle cx="214" cy="84" r="0.9"/><circle cx="356" cy="142" r="1.1"/>
+        <circle cx="493" cy="62" r="1.5"/><circle cx="662" cy="126" r="0.8"/><circle cx="788" cy="75" r="1"/>
+        <circle cx="944" cy="142" r="1.3"/><circle cx="1066" cy="82" r="0.8"/><circle cx="1437" cy="105" r="1.2"/>
+      </g>
+      <g class="sun-disc">
+        <circle cx="1278" cy="218" r="180" fill="url(#sunGlow)" filter="url(#soften)"/>
+        <circle cx="1278" cy="218" r="45" fill="#e9b873" opacity="0.88"/>
+      </g>
+      <g opacity="0.18" fill="none" stroke="#e6c78e" stroke-width="2">
+        <path d="M104 256 C270 208 390 302 553 254 S842 190 1012 248"/>
+        <path d="M905 330 C1094 279 1283 351 1494 292"/>
+      </g>
+
+      <g class="far-mountains">
+        <path d="M0 586 L147 397 L234 488 L404 273 L487 406 L581 345 L731 523 L845 339 L926 410 L1059 274 L1217 465 L1308 356 L1458 512 L1600 393 L1600 900 L0 900Z" fill="url(#farPeak)"/>
+        <path d="M300 420 L404 273 L487 406 L449 383 L419 403 L390 352 L359 405 Z" fill="#c8c1c8" opacity="0.72"/>
+        <path d="M981 355 L1059 274 L1144 377 L1104 356 L1071 371 L1044 326 L1015 369 Z" fill="#d5c9c6" opacity="0.66"/>
+        <path d="M794 405 L845 339 L909 397 L875 382 L850 391 L830 366 Z" fill="#beb9c4" opacity="0.54"/>
+      </g>
+
+      <g class="near-mountains">
+        <path d="M0 665 L228 464 L408 602 L593 433 L762 651 L963 462 L1154 604 L1336 418 L1600 645 L1600 900 L0 900Z" fill="url(#nearPeak)"/>
+        <path d="M0 708 C194 648 352 712 536 670 S881 635 1044 690 S1378 630 1600 682 L1600 900 L0 900Z" fill="url(#ground)"/>
+      </g>
+
+      <g transform="translate(126,535)" opacity="0.82">
+        <rect x="8" y="58" width="154" height="75" fill="#49262b"/>
+        <rect x="23" y="76" width="25" height="38" fill="#c08a4b"/>
+        <rect x="67" y="76" width="25" height="38" fill="#c08a4b"/>
+        <rect x="111" y="76" width="25" height="38" fill="#c08a4b"/>
+        <path d="M-10 62 L30 42 L144 42 L181 62 Z" fill="#a64235"/>
+        <path d="M20 44 L47 23 L132 23 L158 44 Z" fill="#d49a4a"/>
+        <path d="M45 24 L67 8 L114 8 L135 24 Z" fill="#7d322d"/>
+        <rect x="87" y="-12" width="5" height="21" fill="#b98a50"/>
+        <path d="M89 -12 L111 -6 L89 0Z" fill="#d6a64d"/>
+      </g>
+      <path d="M0 792 C252 727 444 809 681 770 S1125 741 1600 797 L1600 900 L0 900Z" fill="#11131c"/>
+    </svg>
+
+    <div class="sky-wash" aria-hidden="true"></div>
+    <div class="prayer-line" aria-hidden="true">
+      <i class="flag" style="--i:0;--flag-color:#466680"></i>
+      <i class="flag" style="--i:1;--flag-color:#d5cec0"></i>
+      <i class="flag" style="--i:2;--flag-color:#a3413c"></i>
+      <i class="flag" style="--i:3;--flag-color:#557154"></i>
+      <i class="flag" style="--i:4;--flag-color:#c59a43"></i>
+      <i class="flag" style="--i:5;--flag-color:#466680"></i>
+      <i class="flag" style="--i:6;--flag-color:#d5cec0"></i>
+      <i class="flag" style="--i:7;--flag-color:#a3413c"></i>
+    </div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="#main-content" aria-label="转境首页">
+        <span class="brand-mark">✦</span>
+        <span class="brand-text">
+          <strong>转境</strong>
+          <small>CYBER MANI · 2084</small>
+        </span>
+      </a>
+
+      <div class="mode-switch" role="group" aria-label="选择控制方式">
+        <button class="mode-button" id="mouse-mode" type="button" aria-pressed="true">
+          <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="6.5" y="2.5" width="11" height="19" rx="5.5"/><path d="M12 2.5v6"/>
+          </svg>
+          鼠标绕转
+        </button>
+        <button class="mode-button" id="gesture-mode" type="button" aria-pressed="false" aria-controls="camera-panel">
+          <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M8.5 11V6.3a1.7 1.7 0 0 1 3.4 0V10m0-4.7a1.7 1.7 0 0 1 3.4 0V10m0-3a1.7 1.7 0 0 1 3.4 0v6.2c0 5-3.1 8.3-7.8 8.3-3.7 0-5.5-2-7.8-5.6-1-1.6.8-3.2 2.1-2.2l3.3 2.5"/>
+          </svg>
+          隔空手势
+        </button>
+        <button class="mode-button" id="motion-mode" type="button" aria-pressed="false" aria-controls="motion-panel">
+          <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M9.5 5h5M3 8c-1.4 2.5-1.4 5.5 0 8m18-8c1.4 2.5 1.4 5.5 0 8"/>
+          </svg>
+          手机体感
+        </button>
+      </div>
+
+      <div class="sound-wrap">
+        <button class="sound-button" id="sound-button" type="button" aria-pressed="false" aria-label="开启风声">
+          <span>风声 · 关闭</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-grid" id="main-content">
+      <section class="intro" aria-labelledby="hero-title">
+        <p class="eyebrow">Digital mani wheel / 数字玛尼轮</p>
+        <h1 id="hero-title">以手为风，<em>令山河转动。</em></h1>
+        <p class="intro-copy">无需按键，晃动鼠标绕轮而行；也可先张掌准备、再握拳自动驱动，或转动、晃动手机。经轮将唤起高原的风、光与经幡。</p>
+        <div class="mantra-line" lang="bo">ༀ་མ་ཎི་པདྨེ་ཧཱུྃ།</div>
+
+        <details class="culture-note">
+          <summary>文化札记</summary>
+          <div class="culture-body">
+            <div>
+              <p>转经筒在藏传佛教文化中也称玛尼轮，筒内常置经文或真言，通常依顺时针方向转动。</p>
+              <p><span lang="bo">ༀ་མ་ཎི་པདྨེ་ཧཱུྃ།</span> 是梵语六字真言的藏文转写，音译“唵嘛呢叭咪吽”。它并非可逐句直译的整段经文；传统修行义可概括为：净化身语意，愿慈悲与智慧合一。</p>
+              <p>为同步呈现设备动作，本数字艺术体验支持双向转动；它不替代真实宗教仪轨。</p>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section class="stage-wrap" aria-label="数字转经筒互动区域">
+        <div class="stage" id="stage" role="button" tabindex="0" aria-keyshortcuts="ArrowLeft ArrowRight Space Enter" aria-label="无需按键，让鼠标围绕经轮顺时针或逆时针移动；也可使用左右方向键">
+          <span class="orbit-label">3d mani wheel · bidirectional motion field</span>
+          <div class="mantra-field" lang="bo" aria-hidden="true">
+            <canvas class="mantra-canvas" id="mantra-canvas"></canvas>
+          </div>
+          <div class="wheel-assembly" aria-hidden="true">
+            <canvas class="mani-canvas" id="mani-canvas"></canvas>
+            <div class="css-wheel-fallback">
+              <div class="pole"></div>
+              <div class="finial"></div>
+              <div class="neck-rings"></div>
+              <div class="drum-shell">
+                <div class="drum-rotor" id="drum-rotor"></div>
+                <div class="drum-light"></div>
+                <div class="drum-cap top"></div>
+                <div class="drum-cap bottom"></div>
+              </div>
+              <svg class="fallback-counterweight" id="fallback-counterweight" viewBox="0 0 520 180" aria-hidden="true">
+                <path class="fallback-chain" id="fallback-chain" d="M260 90 Q350 112 440 130"></path>
+                <circle class="fallback-ball" id="fallback-ball" cx="448" cy="132" r="23"></circle>
+              </svg>
+              <div class="base"></div>
+            </div>
+          </div>
+          <div class="stage-instruction" id="stage-instruction">
+            <svg viewBox="0 0 44 24" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true">
+              <path d="M9 17a9 9 0 0 1 13-11l3 2M35 7a9 9 0 0 1-13 11l-3-2"/>
+              <path d="m21 3 4 5-6 1M23 21l-4-5 6-1"/>
+            </svg>
+            <span>无需按键 · 绕轮晃动鼠标</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="telemetry" aria-label="转动状态">
+        <div class="status-line">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text" aria-live="polite">等待鼠标绕转</span>
+        </div>
+
+        <div class="turn-readout">
+          <div>
+            <span class="turn-label">累计转动</span>
+            <div class="turn-value"><strong id="turn-count">000</strong><span>圈</span></div>
+          </div>
+          <div class="phase">
+            <p class="phase-label">当前风景</p>
+            <p class="phase-name" id="phase-name">暮色 · 静山</p>
+            <p class="phase-label">风速感应</p>
+            <p class="phase-name" id="speed-value">0%</p>
+            <div class="wind-track" aria-hidden="true"><i class="wind-fill" id="wind-fill"></i></div>
+          </div>
+        </div>
+
+        <section class="camera-panel" id="camera-panel" aria-label="手势识别画面">
+          <div class="camera-frame">
+            <video id="camera" playsinline muted></video>
+            <canvas id="hand-overlay"></canvas>
+            <div class="gesture-phase-badge" aria-hidden="true">
+              <i></i><span id="gesture-phase-label">张开手掌 · 准备</span>
+            </div>
+            <div class="camera-loading" id="camera-loading">
+              <i class="loading-ring" aria-hidden="true"></i>
+              <span id="camera-message">正在唤醒视觉感应器…</span>
+            </div>
+          </div>
+          <div class="gesture-guide">
+            <svg viewBox="0 0 42 24" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true">
+              <path d="M2 12h37m-6-6 6 6-6 6"/><path d="M15 20c-4-2-6-5-6-8s2-6 6-8"/>
+            </svg>
+            <span id="gesture-message">先张开手掌准备，再握拳；主画面经轮会自动顺时针转动。</span>
+          </div>
+          <small class="camera-privacy">摄像头默认关闭；识别在当前设备完成，画面不会上传。</small>
+        </section>
+
+        <section class="motion-panel" id="motion-panel" aria-label="手机体感控制">
+          <div class="motion-device" id="motion-device" aria-hidden="true"></div>
+          <div class="motion-copy">
+            <strong id="motion-message">顺时针或逆时针转动手机，也可轻轻晃动续风。</strong>
+            <div class="tilt-track" aria-hidden="true"><i class="tilt-indicator" id="tilt-indicator"></i></div>
+            <small>转动方向与经轮同步；晃动会沿当前方向增加惯性。</small>
+          </div>
+        </section>
+
+        <div class="micro-meta">
+          <div><small>scene</small><strong>冈底斯 · 黄昏</strong></div>
+          <div><small>direction</small><strong id="direction-value">静止 · Still</strong></div>
+        </div>
+      </aside>
+    </main>
+
+    <p class="footer-note">数字艺术体验 · 请以尊重之心观看与互动</p>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const app = document.querySelector("#app");
+      const stage = document.querySelector("#stage");
+      const wheelAssembly = document.querySelector(".wheel-assembly");
+      const maniCanvas = document.querySelector("#mani-canvas");
+      const mantraCanvas = document.querySelector("#mantra-canvas");
+      const mantraContext = mantraCanvas.getContext("2d", { alpha: true });
+      const rotor = document.querySelector("#drum-rotor");
+      const fallbackCounterweight = document.querySelector("#fallback-counterweight");
+      const fallbackChain = document.querySelector("#fallback-chain");
+      const fallbackBall = document.querySelector("#fallback-ball");
+      const mouseModeButton = document.querySelector("#mouse-mode");
+      const gestureModeButton = document.querySelector("#gesture-mode");
+      const motionModeButton = document.querySelector("#motion-mode");
+      const soundButton = document.querySelector("#sound-button");
+      const soundLabel = soundButton.querySelector("span");
+      const stageInstruction = document.querySelector("#stage-instruction span");
+      const turnCount = document.querySelector("#turn-count");
+      const statusDot = document.querySelector("#status-dot");
+      const statusText = document.querySelector("#status-text");
+      const phaseName = document.querySelector("#phase-name");
+      const speedValue = document.querySelector("#speed-value");
+      const windFill = document.querySelector("#wind-fill");
+      const directionValue = document.querySelector("#direction-value");
+      const cameraPanel = document.querySelector("#camera-panel");
+      const cameraFrame = cameraPanel.querySelector(".camera-frame");
+      const camera = document.querySelector("#camera");
+      const overlay = document.querySelector("#hand-overlay");
+      const cameraLoading = document.querySelector("#camera-loading");
+      const cameraMessage = document.querySelector("#camera-message");
+      const gestureMessage = document.querySelector("#gesture-message");
+      const gesturePhaseLabel = document.querySelector("#gesture-phase-label");
+      const motionPanel = document.querySelector("#motion-panel");
+      const motionDevice = document.querySelector("#motion-device");
+      const tiltIndicator = document.querySelector("#tilt-indicator");
+      const motionMessage = document.querySelector("#motion-message");
+      const toast = document.querySelector("#toast");
+
+      const ORNAMENTS = ["◆", "◇", "•", "✦", "·", "❖"];
+      const PANEL_COUNT = 36;
+      const MANTRA_TEXT = "ༀ་མ་ཎི་པདྨེ་ཧཱུྃ།";
+      const TWO_PI = Math.PI * 2;
+      const coarsePointerQuery = matchMedia("(pointer: coarse)");
+      const reducedMotionQuery = matchMedia("(prefers-reduced-motion: reduce)");
+      const MEDIAPIPE_MODULE_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.mjs";
+      const MEDIAPIPE_CLASSIC_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/vision_bundle.js";
+      const MEDIAPIPE_WASM_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
+      const GESTURE_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task";
+      /* GESTURE_MACHINE_START */
+      const GestureMachine = (() => {
+        const WAIT_OPEN = "waiting";
+        const ARMED = "armed";
+        const SPINNING = "spinning";
+        const OPEN = "open";
+        const FIST_STRONG = "fist-strong";
+        const FIST_WEAK = "fist-weak";
+        const AMBIGUOUS = "ambiguous";
+        const MISSING = "missing";
+
+        const createState = () => ({
+          phase: WAIT_OPEN,
+          openFrames: 0,
+          fistFrames: 0,
+          ambiguousFrames: 0,
+          missingFrames: 0
+        });
+
+        function classify(metrics, phase) {
+          if (!metrics.hasHand) return MISSING;
+          const openStrong = (metrics.topCategory === "Open_Palm" && metrics.topScore >= 0.65)
+            || (metrics.foldedCount <= 1 && metrics.openPalmFallback);
+          const fistStrong = (metrics.topCategory === "Closed_Fist" && metrics.topScore >= 0.45)
+            || metrics.foldedCount >= 3;
+          const fistWeak = (metrics.topCategory === "Closed_Fist" && metrics.topScore >= 0.22)
+            || metrics.foldedCount >= 2;
+          if (openStrong) return OPEN;
+          if (fistStrong) return FIST_STRONG;
+          if (phase === SPINNING && fistWeak) return FIST_WEAK;
+          return AMBIGUOUS;
+        }
+
+        function step(previous, evidence) {
+          const next = { ...previous };
+          const effects = { armed: false, started: false, stopped: false, drive: false };
+          const resetCounters = () => {
+            next.openFrames = 0;
+            next.fistFrames = 0;
+            next.ambiguousFrames = 0;
+            next.missingFrames = 0;
+          };
+          const cancel = () => {
+            effects.stopped = previous.phase === SPINNING;
+            Object.assign(next, createState());
+          };
+
+          if (previous.phase === WAIT_OPEN) {
+            if (evidence === OPEN) {
+              next.openFrames = Math.min(2, next.openFrames + 1);
+              if (next.openFrames >= 2) {
+                resetCounters();
+                next.phase = ARMED;
+                effects.armed = true;
+              }
+            } else {
+              next.openFrames = 0;
+            }
+            return { state: next, effects };
+          }
+
+          if (previous.phase === ARMED) {
+            if (evidence === OPEN) {
+              next.openFrames = Math.min(2, next.openFrames + 1);
+              next.fistFrames = 0;
+              next.ambiguousFrames = 0;
+              next.missingFrames = 0;
+            } else if (evidence === FIST_STRONG) {
+              next.fistFrames = Math.min(2, next.fistFrames + 1);
+              next.openFrames = 0;
+              next.ambiguousFrames = 0;
+              next.missingFrames = 0;
+              if (next.fistFrames >= 2) {
+                resetCounters();
+                next.phase = SPINNING;
+                effects.started = true;
+                effects.drive = true;
+              }
+            } else if (evidence === MISSING) {
+              next.missingFrames += 1;
+              next.fistFrames = 0;
+              next.openFrames = 0;
+              next.ambiguousFrames = 0;
+              if (next.missingFrames >= 6) cancel();
+            } else {
+              next.ambiguousFrames += 1;
+              next.fistFrames = 0;
+              next.openFrames = 0;
+              next.missingFrames = 0;
+              if (next.ambiguousFrames >= 6) cancel();
+            }
+            return { state: next, effects };
+          }
+
+          if (evidence === FIST_STRONG || evidence === FIST_WEAK) {
+            resetCounters();
+            effects.drive = true;
+          } else if (evidence === OPEN) {
+            next.openFrames += 1;
+            next.ambiguousFrames = 0;
+            next.missingFrames = 0;
+            if (next.openFrames >= 2) {
+              resetCounters();
+              next.phase = ARMED;
+              effects.stopped = true;
+              effects.armed = true;
+            }
+          } else if (evidence === MISSING) {
+            next.missingFrames += 1;
+            next.openFrames = 0;
+            next.ambiguousFrames = 0;
+            if (next.missingFrames >= 4) cancel();
+          } else {
+            next.ambiguousFrames += 1;
+            next.openFrames = 0;
+            next.missingFrames = 0;
+            if (next.ambiguousFrames >= 6) cancel();
+          }
+          return { state: next, effects };
+        }
+
+        return {
+          WAIT_OPEN, ARMED, SPINNING, OPEN, FIST_STRONG, FIST_WEAK, AMBIGUOUS, MISSING,
+          createState, classify, step
+        };
+      })();
+      /* GESTURE_MACHINE_END */
+      /* COUNTERWEIGHT_PHYSICS_START */
+      const CounterweightPhysics = (() => {
+        const create = (length, gravity, damping) => ({
+          length,
+          gravity,
+          damping,
+          x: 0,
+          y: 0,
+          z: 0,
+          vx: 0,
+          vy: 0,
+          vz: 0,
+          ax: 0,
+          ay: 0,
+          az: 0,
+          ready: false,
+          moving: false,
+          settleFrames: 0
+        });
+
+        const reset = (body, ax, ay, az) => {
+          const down = body.gravity < 0 ? -1 : 1;
+          body.x = ax;
+          body.y = ay + down * body.length;
+          body.z = az;
+          body.vx = 0;
+          body.vy = 0;
+          body.vz = 0;
+          body.ax = ax;
+          body.ay = ay;
+          body.az = az;
+          body.ready = true;
+          body.moving = false;
+          body.settleFrames = 0;
+        };
+
+        const step = (body, ax, ay, az, elapsed) => {
+          if (!body.ready || !Number.isFinite(elapsed) || elapsed <= 0 || elapsed > 0.5) {
+            reset(body, ax, ay, az);
+            return false;
+          }
+
+          const dt = elapsed;
+          const startAx = body.ax;
+          const startAy = body.ay;
+          const startAz = body.az;
+          const anchorVx = (ax - startAx) / dt;
+          const anchorVy = (ay - startAy) / dt;
+          const anchorVz = (az - startAz) / dt;
+          const anchorSpeed = Math.hypot(anchorVx, anchorVy, anchorVz);
+          const substeps = Math.max(1, Math.ceil(dt * 120));
+          const h = dt / substeps;
+
+          for (let index = 1; index <= substeps; index += 1) {
+            const progress = index / substeps;
+            const currentAx = startAx + (ax - startAx) * progress;
+            const currentAy = startAy + (ay - startAy) * progress;
+            const currentAz = startAz + (az - startAz) * progress;
+            const drag = Math.exp(-body.damping * h);
+
+            body.vy += body.gravity * h;
+            body.vx *= drag;
+            body.vy *= drag;
+            body.vz *= drag;
+            body.x += body.vx * h;
+            body.y += body.vy * h;
+            body.z += body.vz * h;
+
+            let dx = body.x - currentAx;
+            let dy = body.y - currentAy;
+            let dz = body.z - currentAz;
+            let distance = Math.hypot(dx, dy, dz);
+            if (distance < 1e-8) {
+              dx = 0;
+              dy = body.gravity < 0 ? -1 : 1;
+              dz = 0;
+              distance = 1;
+            }
+            dx /= distance;
+            dy /= distance;
+            dz /= distance;
+            body.x = currentAx + dx * body.length;
+            body.y = currentAy + dy * body.length;
+            body.z = currentAz + dz * body.length;
+
+            const radialVelocity = (body.vx - anchorVx) * dx
+              + (body.vy - anchorVy) * dy
+              + (body.vz - anchorVz) * dz;
+            body.vx -= radialVelocity * dx;
+            body.vy -= radialVelocity * dy;
+            body.vz -= radialVelocity * dz;
+          }
+
+          body.ax = ax;
+          body.ay = ay;
+          body.az = az;
+          const down = body.gravity < 0 ? -body.length : body.length;
+          const speed = Math.hypot(body.vx, body.vy, body.vz);
+          const restDeviation = Math.hypot(body.x - ax, body.y - ay - down, body.z - az);
+          const nearlyStill = anchorSpeed < body.length * 0.03
+            && speed < body.length * 0.025
+            && restDeviation < body.length * 0.012;
+          if (nearlyStill) {
+            if (!body.moving) return false;
+            body.settleFrames += 1;
+            if (body.settleFrames >= 8) {
+              reset(body, ax, ay, az);
+              return false;
+            }
+          } else {
+            body.moving = true;
+            body.settleFrames = 0;
+          }
+          return body.moving;
+        };
+
+        return { create, reset, step };
+      })();
+      /* COUNTERWEIGHT_PHYSICS_END */
+      /* CIRCULAR_MOTION_DETECTOR_START */
+      const CircularMotionDetector = (() => {
+        const create = () => ({
+          x: 0,
+          y: 0,
+          z: 0,
+          hasVector: false,
+          previousX: 0,
+          previousY: 0,
+          previousZ: 0,
+          hasPrevious: false,
+          gravityX: 0,
+          gravityY: 0,
+          gravityZ: 0,
+          hasGravity: false,
+          lastAt: 0,
+          lastReliableAt: 0,
+          cooldownUntil: 0,
+          pendingDegrees: 0,
+          coherence: 0,
+          active: false,
+          direction: 0
+        });
+
+        const reset = (detector) => Object.assign(detector, create());
+
+        const step = (detector, x, y, now) => {
+          const result = {
+            degrees: 0,
+            active: detector.active,
+            tracking: false,
+            direction: detector.direction,
+            magnitude: 0,
+            x: detector.x,
+            y: detector.y,
+            z: detector.z
+          };
+          if (![x, y, z, gx, gy, gz, now].every(Number.isFinite)) return result;
+
+          const gravityLength = Math.hypot(gx, gy, gz);
+          if (gravityLength < 1e-4) return result;
+          const gravityX = gx / gravityLength;
+          const gravityY = gy / gravityLength;
+          const gravityZ = gz / gravityLength;
+          if (detector.hasGravity) {
+            const gravityAlignment = detector.gravityX * gravityX
+              + detector.gravityY * gravityY
+              + detector.gravityZ * gravityZ;
+            if (gravityAlignment < 0.94) {
+              detector.hasPrevious = false;
+              detector.pendingDegrees = 0;
+              detector.coherence = 0;
+              detector.active = false;
+              detector.direction = 0;
+            }
+          }
+          detector.gravityX = gravityX;
+          detector.gravityY = gravityY;
+          detector.gravityZ = gravityZ;
+          detector.hasGravity = true;
+
+          const gravityComponent = x * gravityX + y * gravityY + z * gravityZ;
+          const projectedX = x - gravityComponent * gravityX;
+          const projectedY = y - gravityComponent * gravityY;
+          const projectedZ = z - gravityComponent * gravityZ;
+          const rawMagnitude = Math.hypot(projectedX, projectedY, projectedZ);
+          if (rawMagnitude > 12) {
+            detector.hasPrevious = false;
+            detector.pendingDegrees = 0;
+            detector.coherence = 0;
+            detector.active = false;
+            detector.direction = 0;
+            detector.cooldownUntil = now + 220;
+            return result;
+          }
+          if (now < detector.cooldownUntil) return result;
+
+          const smoothing = detector.hasVector ? 0.44 : 1;
+          detector.x += (projectedX - detector.x) * smoothing;
+          detector.y += (projectedY - detector.y) * smoothing;
+          detector.z += (projectedZ - detector.z) * smoothing;
+          detector.hasVector = true;
+          const magnitude = Math.hypot(detector.x, detector.y, detector.z);
+          result.magnitude = magnitude;
+          result.x = detector.x;
+          result.y = detector.y;
+          result.z = detector.z;
+
+          if (magnitude < 0.65) {
+            detector.coherence *= 0.75;
+            detector.pendingDegrees *= 0.7;
+            if (now - detector.lastReliableAt > 180) reset(detector);
+            result.active = detector.active;
+            return result;
+          }
+
+          result.tracking = true;
+          const currentX = detector.x / magnitude;
+          const currentY = detector.y / magnitude;
+          const currentZ = detector.z / magnitude;
+          if (!detector.hasPrevious || now - detector.lastAt > 160) {
+            detector.previousX = currentX;
+            detector.previousY = currentY;
+            detector.previousZ = currentZ;
+            detector.hasPrevious = true;
+            detector.lastAt = now;
+            detector.lastReliableAt = now;
+            detector.pendingDegrees = 0;
+            detector.coherence = 0;
+            detector.active = false;
+            detector.direction = 0;
+            return result;
+          }
+
+          const elapsed = now - detector.lastAt;
+          const crossX = detector.previousY * currentZ - detector.previousZ * currentY;
+          const crossY = detector.previousZ * currentX - detector.previousX * currentZ;
+          const crossZ = detector.previousX * currentY - detector.previousY * currentX;
+          const crossAlongGravity = gravityX * crossX + gravityY * crossY + gravityZ * crossZ;
+          const vectorDot = detector.previousX * currentX
+            + detector.previousY * currentY
+            + detector.previousZ * currentZ;
+          const delta = -Math.atan2(crossAlongGravity, vectorDot) * 180 / Math.PI;
+          detector.previousX = currentX;
+          detector.previousY = currentY;
+          detector.previousZ = currentZ;
+          detector.lastAt = now;
+          detector.lastReliableAt = now;
+          const maximumDelta = Math.min(80, Math.max(10, elapsed * 0.72));
+          if (Math.abs(delta) > maximumDelta) {
+            detector.pendingDegrees = 0;
+            detector.coherence *= 0.45;
+            detector.active = false;
+            detector.direction = 0;
+            return result;
+          }
+          if (Math.abs(delta) < 0.2) {
+            result.active = detector.active;
+            return result;
+          }
+
+          const sampleDirection = Math.sign(delta);
+          const directionEvidence = sampleDirection * Math.min(1, Math.abs(delta) / 5);
+          detector.coherence = detector.coherence * 0.68 + directionEvidence * 0.32;
+          detector.pendingDegrees = Math.max(-100, Math.min(100, detector.pendingDegrees + delta));
+
+          if (!detector.active
+            && Math.abs(detector.coherence) > 0.55
+            && Math.abs(detector.pendingDegrees) >= 8) {
+            detector.active = true;
+            detector.direction = Math.sign(detector.coherence);
+            result.degrees = detector.pendingDegrees;
+            detector.pendingDegrees = 0;
+          } else if (detector.active) {
+            if (sampleDirection === detector.direction && Math.abs(detector.coherence) > 0.12) {
+              result.degrees = detector.pendingDegrees;
+              detector.pendingDegrees = 0;
+            } else if (Math.sign(detector.coherence) !== detector.direction
+              && Math.abs(detector.coherence) > 0.52) {
+              detector.direction = Math.sign(detector.coherence);
+              result.degrees = detector.pendingDegrees;
+              detector.pendingDegrees = 0;
+            }
+          }
+
+          result.active = detector.active;
+          result.direction = detector.direction;
+          return result;
+        };
+
+        return { create, reset, step };
+      })();
+      /* CIRCULAR_MOTION_DETECTOR_END */
+      const state = {
+        mode: "mouse",
+        rotation: 0,
+        velocity: 0,
+        travelDegrees: 0,
+        turns: 0,
+        lastDirection: 1,
+        lastPointerAngle: null,
+        lastPointerAt: 0,
+        inputResidual: 0,
+        inputActiveUntil: 0,
+        pointerTiltX: 0,
+        pointerTiltY: 0,
+        pointerSamples: [],
+        needs3DRender: true,
+        rotationDirty: true,
+        lastFrame: performance.now(),
+        animationFrame: 0,
+        lastTelemetryAt: 0,
+        lastMantraRenderAt: 0,
+        lastVisualEnergy: -1,
+        lastVisualWarmth: -1,
+        mantraWidth: 0,
+        mantraHeight: 0,
+        mantraDpr: 1,
+        mantraResizeFrame: 0,
+        mantraInnerRadius: 120,
+        mantraEnergy: 0,
+        mantraVisible: false,
+        mantraBurstAt: 0,
+        mantraBurstStrength: 1,
+        lastMantraPulseSegment: 0,
+        mantraSprite: null,
+        mantraReverseSprite: null,
+        mantraSparkSprite: null,
+        mantraTurquoiseSprite: null,
+        mantraHaloSprite: null,
+        mantraBurstSprite: null,
+        stageVisible: true,
+        reducedMotion: reducedMotionQuery.matches,
+        soundEnabled: false,
+        audioContext: null,
+        windGain: null,
+        cameraStream: null,
+        cameraStarting: false,
+        cameraLoop: 0,
+        handLandmarker: null,
+        gestureEngine: null,
+        gestureWorker: null,
+        gestureWorkerUrl: null,
+        gestureWorkerPromise: null,
+        gestureWorkerGeneration: 0,
+        gesturePendingWorker: null,
+        gesturePendingWorkerUrl: null,
+        gesturePendingReject: null,
+        gestureWorkerFailed: false,
+        gestureFrameInFlight: false,
+        gestureFrameSentAt: 0,
+        gestureFrameSequence: 0,
+        gestureWorkerHasResult: false,
+        gestureInferenceInterval: 80,
+        lastVideoTime: -1,
+        lastGestureInferenceAt: 0,
+        gestureMachine: GestureMachine.createState(),
+        gestureDriveUntil: 0,
+        gestureErrorFrames: 0,
+        gestureOverlayNeedsClear: false,
+        latestGestureLandmarks: null,
+        lastOverlayRenderAt: 0,
+        last3DRenderAt: 0,
+        counterweightMoving: false,
+        fallbackCounterweight: CounterweightPhysics.create(72, 650, 2.6),
+        fallbackCounterweightAt: 0,
+        cameraRequestId: 0,
+        lastMotionAt: 0,
+        motionQuaternion: null,
+        motionCircle: CircularMotionDetector.create(),
+        motionGravityBaseline: null,
+        motionReceived: false,
+        lastShakeAt: 0,
+        motionListening: false,
+        motionStarting: false,
+        motionRequestId: 0,
+        motionPermissionPromise: null,
+        orientationPermissionGranted: false,
+        deviceMotionPermissionGranted: false,
+        motionTimeout: 0,
+        motionInputPending: 0,
+        motionTiltPending: null,
+        lastBellTurn: 0,
+        mani3D: null
+      };
+
+      function createDrum() {
+        rotor.replaceChildren();
+        const radius = clamp(rotor.getBoundingClientRect().width * 0.46, 108, 151);
+        const panelWidth = Math.ceil((2 * Math.PI * radius) / PANEL_COUNT) + 1;
+        const fragment = document.createDocumentFragment();
+
+        for (let index = 0; index < PANEL_COUNT; index += 1) {
+          const panel = document.createElement("div");
+          panel.className = "drum-panel";
+          panel.style.setProperty("--panel-width", `${panelWidth}px`);
+          panel.style.setProperty("--panel-angle", `${index * (360 / PANEL_COUNT)}deg`);
+          panel.style.setProperty("--drum-radius", `${radius}px`);
+
+          const glyph = document.createElement("span");
+          glyph.className = "panel-glyph";
+          glyph.textContent = ORNAMENTS[index % ORNAMENTS.length];
+
+          const stitch = document.createElement("i");
+          stitch.className = "panel-stitch";
+          panel.append(glyph, stitch);
+          if (index % 6 === 0) {
+            const gem = document.createElement("i");
+            gem.className = "panel-gem";
+            panel.append(gem);
+          }
+          fragment.append(panel);
+        }
+
+        rotor.append(fragment);
+      }
+
+      function createManiTexture(THREE, renderer) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 2048;
+        canvas.height = 768;
+        const context = canvas.getContext("2d");
+        const lacquer = context.createLinearGradient(0, 0, 0, canvas.height);
+        lacquer.addColorStop(0, "#7a241d");
+        lacquer.addColorStop(0.28, "#b1492d");
+        lacquer.addColorStop(0.53, "#681b1d");
+        lacquer.addColorStop(0.78, "#a63a28");
+        lacquer.addColorStop(1, "#4b1518");
+        context.fillStyle = lacquer;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        context.globalAlpha = 0.22;
+        for (let x = 0; x < canvas.width; x += 18) {
+          context.fillStyle = x % 36 ? "#f0c86f" : "#2a0c12";
+          context.fillRect(x, 0, 1, canvas.height);
+        }
+        context.globalAlpha = 1;
+
+        const bands = [24, 52, 154, 178, 576, 600, 704, 736];
+        bands.forEach((y, index) => {
+          const band = context.createLinearGradient(0, y, 0, y + 18);
+          band.addColorStop(0, index % 2 ? "#7d4c16" : "#f1cd70");
+          band.addColorStop(0.5, "#c58a2d");
+          band.addColorStop(1, "#5d3211");
+          context.fillStyle = band;
+          context.fillRect(0, y, canvas.width, index % 2 ? 12 : 18);
+        });
+
+        context.strokeStyle = "rgba(239, 197, 103, 0.58)";
+        context.lineWidth = 6;
+        for (let x = 0; x < canvas.width; x += 256) {
+          context.strokeRect(x + 26, 222, 204, 310);
+          context.strokeRect(x + 38, 234, 180, 286);
+        }
+
+        const mantra = "ༀ་མ་ཎི་པདྨེ་ཧཱུྃ།";
+        context.font = '700 92px "Noto Serif Tibetan", "Kailasa", "Tibetan Machine Uni", serif';
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillStyle = "#f1d179";
+        context.shadowColor = "rgba(28, 7, 10, 0.8)";
+        context.shadowBlur = 7;
+        context.shadowOffsetY = 4;
+        for (let x = 128; x < canvas.width; x += 256) {
+          context.save();
+          context.translate(x, 377);
+          context.scale(0.62, 0.62);
+          context.fillText(mantra, 0, 0, 370);
+          context.restore();
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+        return texture;
+      }
+
+      async function initMani3D() {
+        try {
+          const fontReady = document.fonts?.ready || Promise.resolve();
+          const [THREE] = await Promise.all([
+            import("https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js"),
+            fontReady
+          ]);
+          if (!maniCanvas.isConnected) return;
+
+          const mobileBudget = matchMedia("(pointer: coarse)").matches;
+          const renderer = new THREE.WebGLRenderer({
+            canvas: maniCanvas,
+            alpha: true,
+            antialias: true,
+            powerPreference: "high-performance"
+          });
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobileBudget ? 1 : 1.25));
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+          renderer.toneMapping = THREE.ACESFilmicToneMapping;
+          renderer.toneMappingExposure = 1.18;
+          renderer.shadowMap.enabled = false;
+
+          const scene = new THREE.Scene();
+          const camera3D = new THREE.PerspectiveCamera(35, 1, 0.1, 40);
+          camera3D.position.set(0, -0.55, 10.4);
+          camera3D.lookAt(0, -0.72, 0);
+
+          scene.add(new THREE.HemisphereLight(0xffe9bd, 0x171023, 1.9));
+          const keyLight = new THREE.DirectionalLight(0xffd48a, 3.5);
+          keyLight.position.set(-3.6, 6.2, 7.5);
+          keyLight.castShadow = false;
+          scene.add(keyLight);
+          const rimLight = new THREE.DirectionalLight(0x58d5d1, 1.25);
+          rimLight.position.set(5.5, 1.5, -4);
+          scene.add(rimLight);
+
+          const root = new THREE.Group();
+          root.rotation.z = -0.045;
+          scene.add(root);
+
+          const gold = new THREE.MeshPhongMaterial({
+            color: 0xd5a84d,
+            specular: 0xffdda0,
+            shininess: 72,
+            emissive: 0x321603,
+            emissiveIntensity: 0.16
+          });
+          const darkGold = new THREE.MeshPhongMaterial({ color: 0x7c4a18, specular: 0xb87831, shininess: 48, emissive: 0x190b02, emissiveIntensity: 0.12 });
+          const turquoise = new THREE.MeshPhongMaterial({
+            color: 0x32aaa8,
+            specular: 0xb8ffff,
+            shininess: 84,
+            emissive: 0x073c3e,
+            emissiveIntensity: 0.24
+          });
+          const lacquer = new THREE.MeshPhongMaterial({
+            color: 0x8e2c25,
+            specular: 0xd47754,
+            shininess: 34,
+            emissive: 0x220607,
+            emissiveIntensity: 0.12
+          });
+          const iron = new THREE.MeshPhongMaterial({ color: 0x554934, specular: 0xd5c08e, shininess: 64, emissive: 0x0d0904, emissiveIntensity: 0.1 });
+          const drumMaterial = new THREE.MeshLambertMaterial({
+            map: createManiTexture(THREE, renderer),
+            color: 0xffffff
+          });
+
+          const addMesh = (geometry, material, parent = root) => {
+            const mesh = new THREE.Mesh(geometry, material);
+            parent.add(mesh);
+            return mesh;
+          };
+          const addRing = (radius, tube, y, material, parent = root) => {
+            const ring = addMesh(new THREE.TorusGeometry(radius, tube, 8, 40), material, parent);
+            ring.position.y = y;
+            ring.rotation.x = Math.PI / 2;
+            return ring;
+          };
+
+          const axle = addMesh(new THREE.CylinderGeometry(0.115, 0.115, 5.25, 20), darkGold);
+          axle.position.y = -0.72;
+
+          const handle = addMesh(new THREE.CylinderGeometry(0.25, 0.32, 2.35, 28), lacquer);
+          handle.position.y = -2.48;
+          [ -1.35, -1.56, -2.05, -2.55, -3.15, -3.62 ].forEach((y, index) => {
+            addRing(index === 0 ? 0.48 : 0.29, index === 0 ? 0.085 : 0.045, y, index % 2 ? darkGold : gold);
+          });
+          const handleTip = addMesh(new THREE.SphereGeometry(0.2, 20, 14), turquoise);
+          handleTip.position.y = -3.72;
+          handleTip.scale.y = 0.58;
+
+          const rotorGroup = new THREE.Group();
+          root.add(rotorGroup);
+
+          const drum = addMesh(new THREE.CylinderGeometry(1.31, 1.31, 1.78, 48, 1, true), drumMaterial, rotorGroup);
+          drum.position.y = 0.05;
+          addRing(1.32, 0.105, 0.94, gold, rotorGroup);
+          addRing(1.32, 0.105, -0.84, darkGold, rotorGroup);
+          addRing(1.325, 0.045, 0.61, gold, rotorGroup);
+          addRing(1.325, 0.045, -0.48, gold, rotorGroup);
+          const topCap = addMesh(new THREE.CylinderGeometry(1.38, 1.38, 0.12, 48), gold, rotorGroup);
+          topCap.position.y = 0.96;
+          const bottomCap = addMesh(new THREE.CylinderGeometry(1.37, 1.37, 0.12, 48), darkGold, rotorGroup);
+          bottomCap.position.y = -0.86;
+          const roof = addMesh(new THREE.CylinderGeometry(0.38, 1.16, 0.38, 36), gold, rotorGroup);
+          roof.position.y = 1.19;
+          const lowerCrown = addMesh(new THREE.CylinderGeometry(0.38, 1.05, 0.3, 36), darkGold, rotorGroup);
+          lowerCrown.position.y = -1.06;
+
+          const frameGeometry = new THREE.BoxGeometry(0.46, 0.66, 0.07);
+          const gemGeometry = new THREE.BoxGeometry(0.34, 0.52, 0.085);
+          const frameInstances = new THREE.InstancedMesh(frameGeometry, gold, 8);
+          const gemInstances = new THREE.InstancedMesh(gemGeometry, turquoise, 8);
+          const instanceTransform = new THREE.Object3D();
+          rotorGroup.add(frameInstances, gemInstances);
+          for (let index = 0; index < 8; index += 1) {
+            const angle = index * Math.PI / 4;
+            const sine = Math.sin(angle);
+            const cosine = Math.cos(angle);
+            instanceTransform.position.set(sine * 1.345, 0.06, cosine * 1.345);
+            instanceTransform.rotation.set(0, angle, 0);
+            instanceTransform.updateMatrix();
+            frameInstances.setMatrixAt(index, instanceTransform.matrix);
+            instanceTransform.position.set(sine * 1.395, 0.06, cosine * 1.395);
+            instanceTransform.updateMatrix();
+            gemInstances.setMatrixAt(index, instanceTransform.matrix);
+          }
+          frameInstances.instanceMatrix.needsUpdate = true;
+          gemInstances.instanceMatrix.needsUpdate = true;
+
+          const finialBase = addMesh(new THREE.CylinderGeometry(0.43, 0.58, 0.22, 28), gold);
+          finialBase.position.y = 1.52;
+          const finialCrown = addMesh(new THREE.ConeGeometry(0.34, 0.55, 28), gold);
+          finialCrown.position.y = 1.84;
+          const finialGem = addMesh(new THREE.SphereGeometry(0.28, 24, 16), turquoise);
+          finialGem.position.set(0, 2.1, 0.06);
+          finialGem.scale.set(0.8, 1.08, 0.42);
+          addRing(0.31, 0.045, 2.1, gold);
+
+          const chainAnchor = addRing(0.13, 0.035, 0.26, iron, rotorGroup);
+          chainAnchor.position.x = 1.36;
+          chainAnchor.rotation.y = Math.PI / 2;
+          const CHAIN_LINK_COUNT = 7;
+          const linkGeometry = new THREE.TorusGeometry(0.115, 0.026, 6, 18);
+          const chainMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff, specular: 0xffe1a3, shininess: 58 });
+          const chainLinks = new THREE.InstancedMesh(linkGeometry, chainMaterial, CHAIN_LINK_COUNT);
+          chainLinks.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          chainLinks.frustumCulled = false;
+          for (let index = 0; index < CHAIN_LINK_COUNT; index += 1) {
+            chainLinks.setColorAt(index, new THREE.Color(index % 2 ? 0xd5a84d : 0x554934));
+          }
+          chainLinks.instanceColor.needsUpdate = true;
+          root.add(chainLinks);
+          const ballGroup = new THREE.Group();
+          root.add(ballGroup);
+          const ball = addMesh(new THREE.SphereGeometry(0.27, 24, 18), turquoise, ballGroup);
+          ball.scale.y = 1.1;
+          const ballTop = addMesh(new THREE.ConeGeometry(0.2, 0.24, 20), gold, ballGroup);
+          ballTop.position.y = 0.32;
+          const ballBottom = addMesh(new THREE.ConeGeometry(0.17, 0.26, 20), darkGold, ballGroup);
+          ballBottom.position.y = -0.34;
+          ballBottom.rotation.z = Math.PI;
+
+          const counterweight = CounterweightPhysics.create(1.25, -9.8, 2.2);
+          const chainAnchorPoint = new THREE.Vector3(1.43, 0.26, 0);
+          const chainEnd = new THREE.Vector3();
+          const chainDirection = new THREE.Vector3();
+          const ballDirection = new THREE.Vector3();
+          const linkYAxis = new THREE.Vector3(0, 1, 0);
+          const ballYAxis = new THREE.Vector3(0, 1, 0);
+          const linkTransform = new THREE.Object3D();
+          let lastCounterweightAt = 0;
+          const render = (now = performance.now()) => {
+            const rotorAngle = THREE.MathUtils.degToRad(state.rotation);
+            rotorGroup.rotation.y = rotorAngle;
+            chainAnchorPoint.set(1.43 * Math.cos(rotorAngle), 0.26, -1.43 * Math.sin(rotorAngle));
+            const elapsed = lastCounterweightAt ? (now - lastCounterweightAt) / 1000 : 0;
+            lastCounterweightAt = now;
+            state.counterweightMoving = CounterweightPhysics.step(
+              counterweight,
+              chainAnchorPoint.x,
+              chainAnchorPoint.y,
+              chainAnchorPoint.z,
+              elapsed
+            );
+            chainEnd.set(counterweight.x, counterweight.y, counterweight.z);
+            chainDirection.subVectors(chainEnd, chainAnchorPoint).normalize();
+            for (let index = 0; index < CHAIN_LINK_COUNT; index += 1) {
+              const t = (index + 1) / (CHAIN_LINK_COUNT + 1);
+              linkTransform.position.lerpVectors(chainAnchorPoint, chainEnd, t);
+              linkTransform.quaternion.setFromUnitVectors(linkYAxis, chainDirection);
+              if (index % 2) linkTransform.rotateOnAxis(linkYAxis, Math.PI / 2);
+              linkTransform.scale.set(1, 1.24, 1);
+              linkTransform.updateMatrix();
+              chainLinks.setMatrixAt(index, linkTransform.matrix);
+            }
+            chainLinks.instanceMatrix.needsUpdate = true;
+            ballGroup.position.copy(chainEnd);
+            ballDirection.subVectors(chainAnchorPoint, chainEnd).normalize();
+            ballGroup.quaternion.setFromUnitVectors(ballYAxis, ballDirection);
+
+            root.rotation.x = -0.035 + state.pointerTiltY * 0.09;
+            root.rotation.y = state.pointerTiltX * 0.08;
+            renderer.render(scene, camera3D);
+          };
+
+          const resize = () => {
+            const rect = maniCanvas.getBoundingClientRect();
+            const width = Math.max(1, Math.round(rect.width));
+            const height = Math.max(1, Math.round(rect.height));
+            renderer.setSize(width, height, false);
+            camera3D.aspect = width / height;
+            camera3D.position.z = camera3D.aspect < 1 ? 14 : 10.4;
+            camera3D.updateProjectionMatrix();
+            render();
+          };
+
+          const resizeObserver = new ResizeObserver(resize);
+          resizeObserver.observe(maniCanvas);
+          const dispose = () => {
+            resizeObserver.disconnect();
+            const disposedMaterials = new Set();
+            const disposedTextures = new Set();
+            scene.traverse((object) => {
+              object.geometry?.dispose?.();
+              const materials = Array.isArray(object.material) ? object.material : [object.material];
+              materials.filter(Boolean).forEach((material) => {
+                if (disposedMaterials.has(material)) return;
+                disposedMaterials.add(material);
+                Object.values(material).forEach((value) => {
+                  if (!value?.isTexture || disposedTextures.has(value)) return;
+                  disposedTextures.add(value);
+                  value.dispose();
+                });
+                material.dispose?.();
+              });
+            });
+            renderer.dispose();
+          };
+          state.mani3D = { renderer, render, resizeObserver, dispose };
+          maniCanvas.addEventListener("webglcontextlost", (event) => {
+            event.preventDefault();
+            wheelAssembly.classList.remove("webgl-ready");
+            state.needs3DRender = true;
+            ensureAnimation();
+          });
+          maniCanvas.addEventListener("webglcontextrestored", () => {
+            requestAnimationFrame(() => {
+              resize();
+              wheelAssembly.classList.add("webgl-ready");
+            });
+          });
+          resize();
+          wheelAssembly.classList.add("webgl-ready");
+          ensureAnimation();
+        } catch (error) {
+          console.warn("3D mani wheel unavailable; using CSS fallback:", error);
+        }
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("visible");
+        window.clearTimeout(showToast.timer);
+        showToast.timer = window.setTimeout(() => toast.classList.remove("visible"), 2800);
+      }
+
+      function setText(element, value) {
+        if (element.textContent !== value) element.textContent = value;
+      }
+
+      function setStatus(message, active) {
+        setText(statusText, message);
+        if (typeof active === "boolean") statusDot.classList.toggle("active", active);
+      }
+
+      function updateMode(mode) {
+        if (state.mode === mode) {
+          if (mode === "motion") {
+            if (state.motionListening) calibrateMotion();
+            else startMotionControl();
+            return;
+          }
+          else if (mode !== "gesture" || state.cameraStream) return;
+        }
+
+        const previousMode = state.mode;
+        state.mode = mode;
+        const gestureActive = mode === "gesture";
+        const motionActive = mode === "motion";
+        mouseModeButton.setAttribute("aria-pressed", String(mode === "mouse"));
+        gestureModeButton.setAttribute("aria-pressed", String(gestureActive));
+        motionModeButton.setAttribute("aria-pressed", String(motionActive));
+        cameraPanel.classList.toggle("visible", gestureActive);
+        app.classList.toggle("gesture-active", gestureActive);
+        motionPanel.classList.toggle("visible", motionActive);
+        resizeMantraCanvas();
+        stageInstruction.textContent = gestureActive
+          ? "张掌准备 · 握拳自动转动"
+          : motionActive
+            ? "转动或晃动手机"
+            : "无需按键 · 绕轮晃动鼠标";
+        state.lastPointerAngle = null;
+        state.inputResidual = 0;
+        state.inputActiveUntil = 0;
+        if (gestureActive) {
+          state.gestureMachine = GestureMachine.createState();
+          state.gestureDriveUntil = 0;
+          cameraFrame.dataset.arState = "waiting";
+          setText(gesturePhaseLabel, "张开手掌 · 准备");
+        }
+
+        if (previousMode === "gesture" && !gestureActive) stopCamera();
+        if (previousMode === "motion" && !motionActive) stopMotionControl();
+
+        if (gestureActive) {
+          startCamera();
+        } else if (motionActive) {
+          startMotionControl();
+        } else {
+          setStatus("等待鼠标绕转", false);
+        }
+
+        if (mode !== "mouse" && matchMedia("(max-width: 46rem)").matches) {
+          const target = gestureActive ? cameraPanel : motionPanel;
+          requestAnimationFrame(() => target.scrollIntoView({
+            behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+            block: "center"
+          }));
+        }
+      }
+
+      function impartSpin(amount) {
+        if (!Number.isFinite(amount) || Math.abs(amount) < 0.001) return;
+        const direction = Math.sign(amount);
+        state.lastDirection = direction;
+        state.velocity = Math.sign(state.velocity) && Math.sign(state.velocity) !== direction
+          ? clamp(amount, -24, 24)
+          : clamp(state.velocity * 0.48 + amount, -24, 24);
+        ensureAnimation();
+      }
+
+      function commitRotation(delta) {
+        if (!Number.isFinite(delta) || Math.abs(delta) < 0.0001) return;
+        state.rotation += delta;
+        state.rotationDirty = true;
+        state.travelDegrees += Math.abs(delta);
+        state.lastDirection = Math.sign(delta) || state.lastDirection;
+        const nextTurns = Math.floor(state.travelDegrees / 360);
+        const nextPulseSegment = Math.floor(state.travelDegrees / 120);
+        const pulseNow = performance.now();
+
+        if (nextPulseSegment !== state.lastMantraPulseSegment) {
+          state.lastMantraPulseSegment = nextPulseSegment;
+          if (pulseNow - state.mantraBurstAt > 240) {
+            state.mantraBurstAt = pulseNow;
+            state.mantraBurstStrength = 0.72;
+          }
+        }
+
+        if (nextTurns !== state.turns) {
+          state.turns = nextTurns;
+          state.mantraBurstAt = pulseNow;
+          state.mantraBurstStrength = 1;
+          turnCount.textContent = String(state.turns).padStart(3, "0");
+          if (state.soundEnabled && state.turns > state.lastBellTurn) {
+            state.lastBellTurn = state.turns;
+            playBell();
+          }
+        }
+      }
+
+      function rotateByInput(delta, inertia = 0.68, threshold = 0.08, holdMilliseconds = 110) {
+        if (!Number.isFinite(delta)) return false;
+        state.inputResidual += delta;
+        if (Math.abs(state.inputResidual) < threshold) return false;
+        const committedDelta = state.inputResidual;
+        const impulse = clamp(committedDelta, -26, 26);
+        state.inputResidual = 0;
+        commitRotation(committedDelta);
+        const directionChanged = Math.sign(state.velocity) && Math.sign(state.velocity) !== Math.sign(impulse);
+        state.velocity = directionChanged
+          ? impulse * inertia
+          : clamp(state.velocity * 0.28 + impulse * inertia, -24, 24);
+        state.lastDirection = Math.sign(committedDelta);
+        state.inputActiveUntil = performance.now() + holdMilliseconds;
+        ensureAnimation();
+        return true;
+      }
+
+      function buildMantraSprites() {
+        function createTextSprite(tailDirection) {
+          const sprite = document.createElement("canvas");
+          sprite.width = 840;
+          sprite.height = 180;
+          const context = sprite.getContext("2d");
+          const centerX = 420;
+          const centerY = 92;
+          const farX = tailDirection < 0 ? 18 : 822;
+          const trailGold = context.createLinearGradient(farX, 0, centerX, 0);
+          trailGold.addColorStop(0, "rgba(223, 126, 15, 0)");
+          trailGold.addColorStop(0.58, "rgba(242, 158, 31, 0.04)");
+          trailGold.addColorStop(1, "rgba(255, 223, 126, 0.16)");
+          context.fillStyle = trailGold;
+          context.beginPath();
+          context.moveTo(centerX, centerY - 18);
+          context.lineTo(farX, centerY);
+          context.lineTo(centerX, centerY + 18);
+          context.closePath();
+          context.fill();
+          context.lineCap = "round";
+          for (let index = 0; index < 5; index += 1) {
+            const offset = (index - 2) * 12;
+            const reach = 0.58 + index * 0.08;
+            context.strokeStyle = index === 2
+              ? "rgba(255, 238, 165, 0.56)"
+              : "rgba(207, 116, 24, 0.3)";
+            context.lineWidth = index === 2 ? 2.2 : 1;
+            context.beginPath();
+            context.moveTo(centerX, centerY + offset * 0.28);
+            context.lineTo(centerX + (farX - centerX) * reach, centerY + offset);
+            context.stroke();
+          }
+          context.font = '700 62px "Noto Serif Tibetan", "Kailasa", "Tibetan Machine Uni", serif';
+          context.textAlign = "center";
+          context.textBaseline = "middle";
+          context.lineJoin = "round";
+          context.shadowColor = "rgba(255, 174, 37, 0.98)";
+          context.shadowBlur = 34;
+          context.fillStyle = "rgba(255, 190, 55, 0.78)";
+          context.fillText(MANTRA_TEXT, centerX, centerY, 650);
+          context.shadowBlur = 0;
+          const textGold = context.createLinearGradient(0, 50, 0, 132);
+          textGold.addColorStop(0, "#fff9d2");
+          textGold.addColorStop(0.38, "#ffe18c");
+          textGold.addColorStop(0.72, "#e79a20");
+          textGold.addColorStop(1, "#fff1a8");
+          context.strokeStyle = "rgba(100, 37, 5, 0.9)";
+          context.lineWidth = 4;
+          context.strokeText(MANTRA_TEXT, centerX, centerY, 650);
+          context.fillStyle = textGold;
+          context.fillText(MANTRA_TEXT, centerX, centerY, 650);
+          context.strokeStyle = "rgba(255, 250, 211, 0.62)";
+          context.lineWidth = 0.9;
+          context.strokeText(MANTRA_TEXT, centerX, centerY - 0.5, 650);
+          return sprite;
+        }
+
+        function createSparkSprite(core, middle, tail) {
+          const sprite = document.createElement("canvas");
+          sprite.width = 128;
+          sprite.height = 52;
+          const context = sprite.getContext("2d");
+          const trail = context.createLinearGradient(4, 0, 106, 0);
+          trail.addColorStop(0, "rgba(0, 0, 0, 0)");
+          trail.addColorStop(0.62, tail);
+          trail.addColorStop(1, middle);
+          context.fillStyle = trail;
+          context.beginPath();
+          context.moveTo(4, 26);
+          context.lineTo(105, 15);
+          context.lineTo(105, 37);
+          context.closePath();
+          context.fill();
+          const glow = context.createRadialGradient(106, 26, 0, 106, 26, 21);
+          glow.addColorStop(0, core);
+          glow.addColorStop(0.18, middle);
+          glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+          context.fillStyle = glow;
+          context.fillRect(84, 4, 44, 44);
+          context.fillStyle = core;
+          context.beginPath();
+          context.moveTo(106, 15);
+          context.lineTo(116, 26);
+          context.lineTo(106, 37);
+          context.lineTo(96, 26);
+          context.closePath();
+          context.fill();
+          return sprite;
+        }
+
+        const textSprite = createTextSprite(-1);
+        const reverseTextSprite = createTextSprite(1);
+        const sparkSprite = createSparkSprite(
+          "rgba(255, 252, 219, 1)",
+          "rgba(255, 205, 76, 0.92)",
+          "rgba(232, 132, 20, 0.22)"
+        );
+        const turquoiseSprite = createSparkSprite(
+          "rgba(226, 255, 243, 1)",
+          "rgba(71, 213, 188, 0.9)",
+          "rgba(18, 126, 117, 0.2)"
+        );
+
+        const haloSprite = document.createElement("canvas");
+        haloSprite.width = 512;
+        haloSprite.height = 512;
+        const haloContext = haloSprite.getContext("2d");
+        haloContext.translate(256, 256);
+        const haloGlow = haloContext.createRadialGradient(0, 0, 52, 0, 0, 246);
+        haloGlow.addColorStop(0, "rgba(255, 207, 83, 0)");
+        haloGlow.addColorStop(0.36, "rgba(255, 195, 57, 0.12)");
+        haloGlow.addColorStop(0.72, "rgba(232, 137, 22, 0.06)");
+        haloGlow.addColorStop(1, "rgba(232, 137, 22, 0)");
+        haloContext.fillStyle = haloGlow;
+        haloContext.beginPath();
+        haloContext.arc(0, 0, 250, 0, TWO_PI);
+        haloContext.fill();
+        for (let index = 0; index < 12; index += 1) {
+          haloContext.save();
+          haloContext.rotate(index * TWO_PI / 12);
+          haloContext.fillStyle = "rgba(137, 45, 24, 0.13)";
+          haloContext.strokeStyle = "rgba(255, 211, 105, 0.28)";
+          haloContext.lineWidth = 1.2;
+          haloContext.beginPath();
+          haloContext.moveTo(62, 0);
+          haloContext.bezierCurveTo(93, -24, 132, -21, 162, 0);
+          haloContext.bezierCurveTo(132, 21, 93, 24, 62, 0);
+          haloContext.closePath();
+          haloContext.fill();
+          haloContext.stroke();
+          haloContext.restore();
+        }
+        haloContext.lineCap = "round";
+        for (let index = 0; index < 108; index += 1) {
+          const angle = index * TWO_PI / 108;
+          const inner = 88 + (index % 4) * 5;
+          const outer = 174 + (index % 9) * 7;
+          haloContext.strokeStyle = index % 3
+            ? "rgba(255, 202, 83, 0.18)"
+            : "rgba(255, 239, 169, 0.36)";
+          haloContext.lineWidth = index % 9 === 0 ? 2 : 0.85;
+          haloContext.beginPath();
+          haloContext.moveTo(Math.cos(angle) * inner, Math.sin(angle) * inner);
+          haloContext.lineTo(Math.cos(angle) * outer, Math.sin(angle) * outer);
+          haloContext.stroke();
+        }
+        haloContext.strokeStyle = "rgba(255, 217, 119, 0.28)";
+        haloContext.lineWidth = 1;
+        [106, 142, 176, 218].forEach((radius) => {
+          haloContext.beginPath();
+          haloContext.arc(0, 0, radius, 0, TWO_PI);
+          haloContext.stroke();
+        });
+        for (let index = 0; index < 12; index += 1) {
+          const angle = index * TWO_PI / 12;
+          const x = Math.cos(angle) * 202;
+          const y = Math.sin(angle) * 202;
+          haloContext.save();
+          haloContext.translate(x, y);
+          haloContext.rotate(angle + Math.PI / 4);
+          haloContext.fillStyle = "rgba(75, 210, 188, 0.58)";
+          haloContext.fillRect(-3.5, -3.5, 7, 7);
+          haloContext.restore();
+        }
+
+        const burstSprite = document.createElement("canvas");
+        burstSprite.width = 512;
+        burstSprite.height = 512;
+        const burstContext = burstSprite.getContext("2d");
+        burstContext.translate(256, 256);
+        burstContext.globalCompositeOperation = "lighter";
+        for (let index = 0; index < 32; index += 1) {
+          burstContext.save();
+          burstContext.rotate(index * TWO_PI / 32);
+          const rayWidth = index % 4 === 0 ? 5.2 : 2.2;
+          burstContext.fillStyle = index % 4 === 0
+            ? "rgba(255, 246, 191, 0.7)"
+            : "rgba(245, 172, 42, 0.28)";
+          burstContext.beginPath();
+          burstContext.moveTo(58, -rayWidth);
+          burstContext.lineTo(index % 4 === 0 ? 252 : 224, 0);
+          burstContext.lineTo(58, rayWidth);
+          burstContext.closePath();
+          burstContext.fill();
+          burstContext.restore();
+        }
+        burstContext.globalCompositeOperation = "source-over";
+        [72, 112, 166, 224].forEach((radius, index) => {
+          burstContext.strokeStyle = index % 2
+            ? "rgba(172, 58, 27, 0.7)"
+            : "rgba(255, 224, 131, 0.86)";
+          burstContext.lineWidth = index % 2 ? 3 : 1.5;
+          burstContext.beginPath();
+          burstContext.arc(0, 0, radius, 0, TWO_PI);
+          burstContext.stroke();
+        });
+
+        state.mantraSprite = textSprite;
+        state.mantraReverseSprite = reverseTextSprite;
+        state.mantraSparkSprite = sparkSprite;
+        state.mantraTurquoiseSprite = turquoiseSprite;
+        state.mantraHaloSprite = haloSprite;
+        state.mantraBurstSprite = burstSprite;
+        state.lastMantraRenderAt = 0;
+      }
+
+      function resizeMantraCanvas() {
+        if (!mantraContext) return;
+        const rect = mantraCanvas.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const dpr = 1;
+        const width = Math.max(1, Math.round(rect.width * dpr));
+        const height = Math.max(1, Math.round(rect.height * dpr));
+        if (mantraCanvas.width === width && mantraCanvas.height === height) return;
+        mantraCanvas.width = width;
+        mantraCanvas.height = height;
+        mantraContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+        state.mantraWidth = rect.width;
+        state.mantraHeight = rect.height;
+        state.mantraDpr = dpr;
+        state.mantraInnerRadius = wheelAssembly.getBoundingClientRect().width * 0.51;
+        state.mantraVisible = false;
+        state.lastMantraRenderAt = 0;
+      }
+
+      function clearMantraField() {
+        if (!mantraContext || !state.mantraVisible) return;
+        mantraContext.save();
+        mantraContext.setTransform(1, 0, 0, 1, 0, 0);
+        mantraContext.clearRect(0, 0, mantraCanvas.width, mantraCanvas.height);
+        mantraContext.restore();
+        state.mantraVisible = false;
+      }
+
+      function drawMantraSprite(sprite, x, y, angle, scale, alpha) {
+        mantraContext.save();
+        mantraContext.globalAlpha = alpha;
+        mantraContext.translate(x, y);
+        mantraContext.rotate(angle);
+        mantraContext.scale(scale, scale);
+        mantraContext.drawImage(sprite, -sprite.width / 2, -sprite.height / 2);
+        mantraContext.restore();
+      }
+
+      function renderMantraField(now, intensity) {
+        if (!state.stageVisible || !mantraContext || !state.mantraSprite || intensity < 0.012) {
+          clearMantraField();
+          return;
+        }
+        if (!state.mantraWidth || !state.mantraHeight) resizeMantraCanvas();
+        const lowBudget = state.mode === "gesture" || coarsePointerQuery.matches;
+        const interval = state.reducedMotion ? 180 : lowBudget ? 50 : 32;
+        if (now - state.lastMantraRenderAt < interval) return;
+        state.lastMantraRenderAt = now;
+        if (!state.mantraVisible) {
+          state.mantraBurstAt = now;
+          state.mantraBurstStrength = 1;
+        }
+        state.mantraVisible = true;
+
+        mantraContext.save();
+        mantraContext.setTransform(1, 0, 0, 1, 0, 0);
+        mantraContext.clearRect(0, 0, mantraCanvas.width, mantraCanvas.height);
+        mantraContext.restore();
+        mantraContext.setTransform(state.mantraDpr, 0, 0, state.mantraDpr, 0, 0);
+        mantraContext.globalCompositeOperation = "source-over";
+
+        const width = state.mantraWidth;
+        const height = state.mantraHeight;
+        const centerX = width * 0.5;
+        const centerY = height * 0.44;
+        const direction = Math.sign(state.velocity) || state.lastDirection || 1;
+        const time = state.reducedMotion ? 0.35 : now / 1000;
+        const visualIntensity = Math.sqrt(intensity);
+        const innerRadius = state.mantraInnerRadius;
+        const maxRadius = Math.min(width * 0.46, height * 0.62);
+        const haloPulse = state.reducedMotion ? 1 : 1 + Math.sin(time * 3.2) * visualIntensity * 0.025;
+        const haloSize = Math.min(width, height) * (0.88 + visualIntensity * 0.3) * haloPulse;
+
+        mantraContext.save();
+        mantraContext.globalAlpha = 0.24 + visualIntensity * 0.58;
+        mantraContext.translate(centerX, centerY);
+        mantraContext.rotate(direction * time * (0.12 + visualIntensity * 0.28));
+        mantraContext.drawImage(state.mantraHaloSprite, -haloSize / 2, -haloSize / 2, haloSize, haloSize);
+        mantraContext.restore();
+
+        if (!state.reducedMotion) {
+          const burstProgress = clamp((now - state.mantraBurstAt) / 460, 0, 1);
+          if (burstProgress < 1) {
+            const easedBurst = 1 - Math.pow(1 - burstProgress, 3);
+            const burstSize = innerRadius * 1.7 + easedBurst * (maxRadius * 2.08 - innerRadius * 1.7);
+            mantraContext.save();
+            mantraContext.globalAlpha = Math.pow(1 - burstProgress, 0.62)
+              * (0.42 + visualIntensity * 0.5) * state.mantraBurstStrength;
+            mantraContext.translate(centerX, centerY);
+            mantraContext.rotate(-direction * time * 0.22);
+            mantraContext.drawImage(
+              state.mantraBurstSprite,
+              -burstSize / 2,
+              -burstSize / 2,
+              burstSize,
+              burstSize
+            );
+            mantraContext.restore();
+          }
+        }
+
+        const laneCount = state.reducedMotion ? (lowBudget ? 4 : 5) : lowBudget ? 6 : 8;
+        const textBudget = lowBudget ? 0.82 : 1;
+        const textWidth = clamp(Math.min(width, height) * 0.42, 156, 300)
+          * textBudget * (0.9 + visualIntensity * 0.16);
+        const travel = Math.max(32, maxRadius - innerRadius - textWidth * 0.2);
+        const textSpeed = 0.12 + intensity * 0.2;
+        const fanArc = Math.PI * (1.18 + visualIntensity * 0.22);
+        const fanStart = -Math.PI / 2 - fanArc / 2;
+        for (let index = 0; index < laneCount; index += 1) {
+          const phase = state.reducedMotion
+            ? (index + 0.7) / laneCount
+            : (time * textSpeed + index / laneCount + (index % 3) * 0.047) % 1;
+          const eased = phase * phase * (3 - 2 * phase);
+          const baseAngle = fanStart + index * fanArc / Math.max(1, laneCount - 1);
+          const angle = baseAngle + direction * (0.2 + visualIntensity * 0.38) * Math.sin(phase * Math.PI);
+          const radius = innerRadius + textWidth * 0.3 + travel * eased;
+          const cosine = Math.cos(angle);
+          const sine = Math.sin(angle);
+          const x = centerX + cosine * radius;
+          const y = centerY + sine * radius * 0.82;
+          const fade = Math.pow(Math.max(0, Math.sin(phase * Math.PI)), 0.72);
+          const alpha = fade * (0.34 + visualIntensity * 0.66);
+          const scale = textWidth / 650 * (0.6 + eased * 0.88);
+          let textAngle = Math.atan2(sine * 0.82, cosine);
+          if (Math.cos(textAngle) < 0) textAngle += Math.PI;
+
+          const sprite = cosine >= 0 ? state.mantraSprite : state.mantraReverseSprite;
+          drawMantraSprite(sprite, x, y, textAngle, scale, alpha);
+        }
+
+        const particleCount = state.reducedMotion ? 6 : lowBudget ? 12 : 20;
+        for (let index = 0; index < particleCount; index += 1) {
+          const phase = state.reducedMotion
+            ? (index + 0.5) / particleCount
+            : (time * (0.27 + intensity * 0.24) + index * 0.137) % 1;
+          const angle = index * 2.399963 + direction * phase * (0.72 + intensity * 0.5);
+          const radius = innerRadius * 0.88 + (maxRadius - innerRadius * 0.88) * phase;
+          const x = centerX + Math.cos(angle) * radius;
+          const y = centerY + Math.sin(angle) * radius * 0.82;
+          const alpha = Math.sin(phase * Math.PI) * (0.22 + visualIntensity * 0.72);
+          const sparkAngle = Math.atan2(Math.sin(angle) * 0.82, Math.cos(angle));
+          const sparkScale = 0.27 + phase * 0.2 + visualIntensity * 0.2;
+          const sprite = index % 5 === 0 ? state.mantraTurquoiseSprite : state.mantraSparkSprite;
+          drawMantraSprite(sprite, x, y, sparkAngle, sparkScale, alpha);
+        }
+
+        mantraContext.globalAlpha = 1;
+        mantraContext.globalCompositeOperation = "source-over";
+      }
+
+      function updateTelemetry(energy) {
+        const percent = Math.round(energy * 100);
+        const visualEnergy = Math.round(energy * 20) / 20;
+        const warmth = Number(clamp(state.turns / 12, 0, 1).toFixed(2));
+
+        if (visualEnergy !== state.lastVisualEnergy) {
+          state.lastVisualEnergy = visualEnergy;
+          app.style.setProperty("--spin-energy", visualEnergy);
+          windFill.style.transform = `scaleX(${Math.max(0.04, visualEnergy)})`;
+        }
+        setText(speedValue, `${percent}%`);
+
+        if (warmth !== state.lastVisualWarmth) {
+          state.lastVisualWarmth = warmth;
+          app.style.setProperty("--scene-warmth", warmth);
+        }
+
+        if (energy > 0.65) {
+          setText(phaseName, "金风 · 经幡盛动");
+        } else if (energy > 0.18) {
+          setText(phaseName, "山风 · 云影流转");
+        } else if (state.turns >= 8) {
+          setText(phaseName, "余晖 · 雪线明亮");
+        } else {
+          setText(phaseName, "暮色 · 静山");
+        }
+
+        const active = energy > 0.035;
+        app.classList.toggle("is-spinning", active);
+        if (active) {
+          const clockwise = state.velocity > 0;
+          setText(directionValue, clockwise ? "顺时针 · Clockwise" : "逆时针 · Counterclockwise");
+        } else {
+          setText(directionValue, "静止 · Still");
+        }
+        if (state.mode === "mouse") {
+          const direction = state.velocity >= 0 ? "顺时针" : "逆时针";
+          setStatus(active ? `${direction}转动中` : "等待鼠标绕转", active);
+        } else if (state.mode === "motion" && !active && state.motionListening) {
+          setStatus("手机体感已就绪", false);
+        }
+
+        if (state.windGain && state.audioContext) {
+          const target = state.soundEnabled ? 0.012 + energy * 0.045 : 0;
+          state.windGain.gain.setTargetAtTime(target, state.audioContext.currentTime, 0.14);
+        }
+      }
+
+      function animate(now) {
+        if (state.pointerSamples.length) processPointerSamples();
+        if (state.motionInputPending || state.motionTiltPending) processMotionInput();
+        const frameScale = clamp((now - state.lastFrame) / 16.667, 0.2, 6);
+        state.lastFrame = now;
+
+        const gestureDriving = state.mode === "gesture"
+          && state.gestureMachine.phase === GestureMachine.SPINNING
+          && now < state.gestureDriveUntil;
+        if (gestureDriving) {
+          const driveBlend = 1 - Math.pow(0.78, frameScale);
+          state.velocity += (9.5 - state.velocity) * driveBlend;
+          state.lastDirection = 1;
+        }
+        const directInputActive = now < state.inputActiveUntil;
+        if (!directInputActive) commitRotation(state.velocity * frameScale);
+        state.velocity *= Math.pow(gestureDriving ? 0.995 : directInputActive ? 0.986 : 0.944, frameScale);
+        if (Math.abs(state.velocity) < 0.008) state.velocity = 0;
+
+        const gestureOverlayActive = state.mode === "gesture" && Boolean(state.cameraStream)
+          && Boolean(state.latestGestureLandmarks || state.gestureOverlayNeedsClear);
+        if (gestureOverlayActive && now - state.lastOverlayRenderAt >= 32) {
+          renderCameraOverlay(state.latestGestureLandmarks);
+          state.lastOverlayRenderAt = now;
+        }
+
+        let rendered3D = false;
+        const limitGestureRender = state.mode === "gesture";
+        const sceneChanging = state.rotationDirty || Math.abs(state.velocity) > 0 || directInputActive
+          || gestureDriving || state.counterweightMoving;
+        const renderDue = state.needs3DRender
+          || (sceneChanging && (!limitGestureRender || now - state.last3DRenderAt >= 32));
+        if (renderDue) {
+          if (state.mani3D && wheelAssembly.classList.contains("webgl-ready")) {
+            state.mani3D.render(now);
+          } else {
+            rotor.style.transform = `rotateY(${state.rotation.toFixed(2)}deg)`;
+            updateFallbackCounterweight(now);
+          }
+          state.last3DRenderAt = now;
+          rendered3D = true;
+        }
+        if (rendered3D) {
+          state.needs3DRender = false;
+          state.rotationDirty = false;
+        }
+        const energy = clamp(Math.abs(state.velocity) / 24, 0, 1);
+        if (energy > state.mantraEnergy) {
+          const attack = 1 - Math.pow(0.38, frameScale);
+          state.mantraEnergy += (energy - state.mantraEnergy) * attack;
+        } else {
+          state.mantraEnergy *= Math.pow(state.reducedMotion ? 0.84 : 0.93, frameScale);
+        }
+        if (energy === 0 && state.mantraEnergy < 0.012) state.mantraEnergy = 0;
+        renderMantraField(now, state.mantraEnergy);
+        if (now - state.lastTelemetryAt >= 180 || (state.velocity === 0 && state.lastVisualEnergy !== 0)) {
+          state.lastTelemetryAt = now;
+          updateTelemetry(energy);
+        }
+        if (Math.abs(state.velocity) > 0 || directInputActive || gestureDriving || state.needs3DRender
+          || state.rotationDirty || state.pointerSamples.length || state.motionInputPending || state.motionTiltPending
+          || gestureOverlayActive || state.mantraEnergy > 0 || state.counterweightMoving) {
+          state.animationFrame = requestAnimationFrame(animate);
+        } else {
+          state.animationFrame = 0;
+        }
+      }
+
+      function ensureAnimation() {
+        if (state.animationFrame) return;
+        state.lastFrame = performance.now();
+        state.animationFrame = requestAnimationFrame(animate);
+      }
+
+      function shortestAngle(next, previous) {
+        return Math.atan2(Math.sin(next - previous), Math.cos(next - previous));
+      }
+
+      function updateFallbackCounterweight(now = performance.now()) {
+        const angle = state.rotation * Math.PI / 180;
+        const depth = -Math.sin(angle);
+        const cosine = Math.cos(angle);
+        const anchorX = 260 + cosine * 112;
+        const anchorY = 82 + depth * 14;
+        const anchorZ = depth * 20;
+        const elapsed = state.fallbackCounterweightAt ? (now - state.fallbackCounterweightAt) / 1000 : 0;
+        state.fallbackCounterweightAt = now;
+        state.counterweightMoving = CounterweightPhysics.step(
+          state.fallbackCounterweight,
+          anchorX,
+          anchorY,
+          anchorZ,
+          elapsed
+        );
+        const ballX = state.fallbackCounterweight.x;
+        const ballY = state.fallbackCounterweight.y;
+        const ballDepth = clamp(state.fallbackCounterweight.z / 20, -1, 1);
+        const controlX = (anchorX + ballX) / 2;
+        const controlY = (anchorY + ballY) / 2 + 2;
+        fallbackChain.setAttribute("d", `M${anchorX.toFixed(1)} ${anchorY.toFixed(1)} Q${controlX.toFixed(1)} ${controlY.toFixed(1)} ${ballX.toFixed(1)} ${ballY.toFixed(1)}`);
+        fallbackBall.setAttribute("cx", ballX.toFixed(1));
+        fallbackBall.setAttribute("cy", ballY.toFixed(1));
+        fallbackBall.setAttribute("r", (19 + (ballDepth + 1) * 3).toFixed(1));
+        fallbackCounterweight.classList.toggle("is-behind", state.fallbackCounterweight.z < 0);
+      }
+
+      function resetPointerOrbit() {
+        state.lastPointerAngle = null;
+        state.lastPointerAt = 0;
+      }
+
+      function processPointerSamples() {
+        const samples = state.pointerSamples.splice(0);
+        if (!samples.length) return;
+        const stageRect = stage.getBoundingClientRect();
+        const wheelRect = wheelAssembly.getBoundingClientRect();
+        const latest = samples[samples.length - 1];
+        state.pointerTiltX = clamp(((latest.x - stageRect.left) / stageRect.width - 0.5) * 2, -1, 1);
+        state.pointerTiltY = clamp(((latest.y - stageRect.top) / stageRect.height - 0.5) * 2, -1, 1);
+
+        if (state.mode !== "mouse") {
+          resetPointerOrbit();
+        } else {
+          const centerX = wheelRect.left + wheelRect.width / 2;
+          const centerY = wheelRect.top + wheelRect.height * 0.35;
+          const deadRadius = Math.max(68, wheelRect.width * 0.34);
+          let frameDelta = 0;
+          samples.forEach((sample) => {
+            const offsetX = sample.x - centerX;
+            const offsetY = sample.y - centerY;
+            const angle = Math.atan2(offsetY, offsetX);
+            if (Math.hypot(offsetX, offsetY) < deadRadius || sample.time - state.lastPointerAt > 160) {
+              state.lastPointerAngle = angle;
+              state.lastPointerAt = sample.time;
+              return;
+            }
+            if (state.lastPointerAngle !== null) {
+              const delta = shortestAngle(angle, state.lastPointerAngle);
+              if (Math.abs(delta) < 0.72) frameDelta += delta * 180 / Math.PI;
+            }
+            state.lastPointerAngle = angle;
+            state.lastPointerAt = sample.time;
+          });
+          rotateByInput(frameDelta, 0.82, 0.08, 90);
+        }
+        wheelAssembly.style.setProperty("--wheel-pitch", `${(-3 + state.pointerTiltY * 2.2).toFixed(2)}deg`);
+        wheelAssembly.style.setProperty("--wheel-yaw", `${(state.pointerTiltX * 2.5).toFixed(2)}deg`);
+        state.needs3DRender = true;
+      }
+
+      function onPointerOrbit(event) {
+        if (event.pointerType !== "mouse" || state.mode !== "mouse") return;
+        const coalesced = event.getCoalescedEvents?.();
+        const events = coalesced?.length ? coalesced : [event];
+        events.forEach((sample) => state.pointerSamples.push({
+          x: sample.clientX,
+          y: sample.clientY,
+          time: Number.isFinite(sample.timeStamp) ? sample.timeStamp : performance.now()
+        }));
+        if (state.pointerSamples.length > 96) state.pointerSamples.splice(0, state.pointerSamples.length - 96);
+        state.needs3DRender = true;
+        ensureAnimation();
+      }
+
+      function onPointerLeave() {
+        state.pointerSamples.length = 0;
+        resetPointerOrbit();
+        state.inputResidual = 0;
+        state.inputActiveUntil = performance.now();
+        state.pointerTiltX = 0;
+        state.pointerTiltY = 0;
+        wheelAssembly.style.setProperty("--wheel-pitch", "-3deg");
+        wheelAssembly.style.setProperty("--wheel-yaw", "0deg");
+        state.needs3DRender = true;
+        ensureAnimation();
+      }
+
+      function onStageKeydown(event) {
+        if (["ArrowLeft", "ArrowRight", " ", "Enter"].includes(event.key)) {
+          event.preventDefault();
+          if (event.key === "ArrowLeft") impartSpin(-7);
+          else if (event.key === "ArrowRight") impartSpin(7);
+          else impartSpin((state.lastDirection || 1) * 10);
+        }
+      }
+
+      function createWindSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return false;
+
+        const context = new AudioContext();
+        const buffer = context.createBuffer(1, context.sampleRate * 3, context.sampleRate);
+        const channel = buffer.getChannelData(0);
+        let last = 0;
+
+        for (let index = 0; index < channel.length; index += 1) {
+          const white = Math.random() * 2 - 1;
+          last = last * 0.985 + white * 0.015;
+          channel[index] = last * 3.2;
+        }
+
+        const source = context.createBufferSource();
+        const filter = context.createBiquadFilter();
+        const gain = context.createGain();
+        source.buffer = buffer;
+        source.loop = true;
+        filter.type = "bandpass";
+        filter.frequency.value = 520;
+        filter.Q.value = 0.38;
+        gain.gain.value = 0;
+        source.connect(filter).connect(gain).connect(context.destination);
+        source.start();
+
+        state.audioContext = context;
+        state.windGain = gain;
+        return true;
+      }
+
+      function playBell() {
+        if (!state.audioContext) return;
+        const now = state.audioContext.currentTime;
+        const master = state.audioContext.createGain();
+        const frequencies = [392, 588, 784];
+        master.gain.setValueAtTime(0.0001, now);
+        master.gain.exponentialRampToValueAtTime(0.055, now + 0.018);
+        master.gain.exponentialRampToValueAtTime(0.0001, now + 1.8);
+        master.connect(state.audioContext.destination);
+
+        frequencies.forEach((frequency, index) => {
+          const oscillator = state.audioContext.createOscillator();
+          const partialGain = state.audioContext.createGain();
+          oscillator.type = index === 0 ? "sine" : "triangle";
+          oscillator.frequency.value = frequency;
+          partialGain.gain.value = 1 / (index + 1.6);
+          oscillator.connect(partialGain).connect(master);
+          oscillator.start(now);
+          oscillator.stop(now + 1.9);
+        });
+      }
+
+      async function toggleSound() {
+        if (!state.audioContext && !createWindSound()) {
+          showToast("当前浏览器不支持声景播放");
+          return;
+        }
+
+        if (state.audioContext.state === "suspended") await state.audioContext.resume();
+        state.soundEnabled = !state.soundEnabled;
+        soundButton.setAttribute("aria-pressed", String(state.soundEnabled));
+        soundButton.setAttribute("aria-label", state.soundEnabled ? "关闭风声" : "开启风声");
+        soundLabel.textContent = state.soundEnabled ? "风声 · 开启" : "风声 · 关闭";
+        showToast(state.soundEnabled ? "高原风声已开启" : "高原风声已关闭");
+        state.lastTelemetryAt = performance.now();
+        updateTelemetry(clamp(Math.abs(state.velocity) / 24, 0, 1));
+      }
+
+      function multiplyQuaternion(a, b) {
+        return [
+          a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+          a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+          a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+          a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0]
+        ];
+      }
+
+      function quaternionFromOrientation(alpha, beta, gamma) {
+        const half = Math.PI / 360;
+        const x = beta * half;
+        const y = gamma * half;
+        const z = alpha * half;
+        const cx = Math.cos(x);
+        const sx = Math.sin(x);
+        const cy = Math.cos(y);
+        const sy = Math.sin(y);
+        const cz = Math.cos(z);
+        const sz = Math.sin(z);
+        return [
+          cx * cy * cz - sx * sy * sz,
+          sx * cy * cz - cx * sy * sz,
+          cx * sy * cz + sx * cy * sz,
+          cx * cy * sz + sx * sy * cz
+        ];
+      }
+
+      function localRotationVector(previous, next) {
+        let aligned = next;
+        const dot = previous.reduce((sum, value, index) => sum + value * next[index], 0);
+        if (dot < 0) aligned = next.map((value) => -value);
+        let delta = multiplyQuaternion(
+          [previous[0], -previous[1], -previous[2], -previous[3]],
+          aligned
+        );
+        if (delta[0] < 0) delta = delta.map((value) => -value);
+        const sine = Math.hypot(delta[1], delta[2], delta[3]);
+        const scale = sine < 1e-7
+          ? 2
+          : 2 * Math.atan2(sine, clamp(delta[0], -1, 1)) / sine;
+        return {
+          quaternion: aligned,
+          vector: [delta[1] * scale, delta[2] * scale, delta[3] * scale]
+        };
+      }
+
+      function calibrateMotion() {
+        state.motionQuaternion = null;
+        state.lastMotionAt = 0;
+        state.motionAxis = "screen";
+        state.motionAxisUntil = 0;
+        state.motionGravity = null;
+        state.motionGravityBaseline = null;
+        state.lastShakeAt = 0;
+        state.inputResidual = 0;
+        state.inputActiveUntil = performance.now();
+        state.motionReceived = false;
+        state.motionInputPending = 0;
+        state.motionTiltPending = null;
+        motionDevice.style.setProperty("--device-tilt", "0deg");
+        tiltIndicator.style.setProperty("--tilt-position", "0%");
+        motionMessage.textContent = "正在读取方向：顺逆转动手机，或轻晃续风…";
+        setStatus("正在连接手机体感", true);
+      }
+
+      function handleDeviceOrientation(event) {
+        if (state.mode !== "motion") return;
+        if (![event.alpha, event.beta, event.gamma].every(Number.isFinite)) return;
+        const now = performance.now();
+        const nextQuaternion = quaternionFromOrientation(event.alpha, event.beta, event.gamma);
+        window.clearTimeout(state.motionTimeout);
+        state.motionReceived = true;
+
+        if (!state.motionQuaternion || now - state.lastMotionAt > 420) {
+          state.motionQuaternion = nextQuaternion;
+          state.lastMotionAt = now;
+          motionMessage.textContent = state.deviceMotionPermissionGranted
+            ? "体感已就绪：顺逆转动手机，或轻晃续风。"
+            : "手机旋转已就绪：顺时针或逆时针转动即可。";
+          setStatus("手机体感已就绪", false);
+          return;
+        }
+
+        const delta = localRotationVector(state.motionQuaternion, nextQuaternion);
+        state.motionQuaternion = delta.quaternion;
+        state.lastMotionAt = now;
+        const screenSpin = delta.vector[2];
+        const gravitySpin = state.motionGravity
+          ? delta.vector[0] * state.motionGravity[0]
+            + delta.vector[1] * state.motionGravity[1]
+            + delta.vector[2] * state.motionGravity[2]
+          : 0;
+
+        if (now >= state.motionAxisUntil) {
+          state.motionAxis = Math.abs(gravitySpin) > Math.abs(screenSpin) * 1.12 ? "gravity" : "screen";
+          state.motionAxisUntil = now + 260;
+        }
+        const chosen = state.motionAxis === "gravity" ? gravitySpin : screenSpin;
+        const clockwiseDegrees = -chosen * 180 / Math.PI;
+        if (Math.abs(clockwiseDegrees) > 28) return;
+
+        if (clockwiseDegrees !== 0) {
+          state.motionInputPending += clockwiseDegrees;
+          state.motionTiltPending = {
+            tilt: clamp(clockwiseDegrees * 1.7, -18, 18),
+            track: clamp(clockwiseDegrees * 4.2, -43, 43)
+          };
+          if (Math.abs(state.motionInputPending) >= 0.1) {
+            state.needs3DRender = true;
+            ensureAnimation();
+          }
+        }
+      }
+
+      function processMotionInput() {
+        const degrees = state.motionInputPending;
+        const tilt = state.motionTiltPending;
+        state.motionInputPending = 0;
+        state.motionTiltPending = null;
+        if (tilt) {
+          motionDevice.style.setProperty("--device-tilt", `${tilt.tilt.toFixed(1)}deg`);
+          tiltIndicator.style.setProperty("--tilt-position", `${tilt.track.toFixed(1)}%`);
+        }
+        if (!degrees) return;
+        const committed = rotateByInput(degrees, 0.76, 0.1, 180);
+        if (committed) setStatus(`手机${degrees > 0 ? "顺时针" : "逆时针"}转动中`, true);
+      }
+
+      function handleDeviceMotion(event) {
+        if (state.mode !== "motion") return;
+        const gravity = event.accelerationIncludingGravity;
+        if (gravity && [gravity.x, gravity.y, gravity.z].every(Number.isFinite)) {
+          const length = Math.hypot(gravity.x, gravity.y, gravity.z) || 1;
+          state.motionGravity = [gravity.x / length, gravity.y / length, gravity.z / length];
+        }
+
+        let acceleration = event.acceleration;
+        if (!acceleration || ![acceleration.x, acceleration.y, acceleration.z].every(Number.isFinite)) {
+          if (!gravity || ![gravity.x, gravity.y, gravity.z].every(Number.isFinite)) return;
+          if (!state.motionGravityBaseline) {
+            state.motionGravityBaseline = [gravity.x, gravity.y, gravity.z];
+            return;
+          }
+          const alpha = 0.88;
+          state.motionGravityBaseline = state.motionGravityBaseline.map((value, index) => {
+            const sample = [gravity.x, gravity.y, gravity.z][index];
+            return value * alpha + sample * (1 - alpha);
+          });
+          acceleration = {
+            x: gravity.x - state.motionGravityBaseline[0],
+            y: gravity.y - state.motionGravityBaseline[1],
+            z: gravity.z - state.motionGravityBaseline[2]
+          };
+        }
+
+        const screenAngle = Number(screen.orientation?.angle ?? window.orientation ?? 0) * Math.PI / 180;
+        const screenX = acceleration.x * Math.cos(screenAngle) + acceleration.y * Math.sin(screenAngle);
+        const screenY = -acceleration.x * Math.sin(screenAngle) + acceleration.y * Math.cos(screenAngle);
+        const force = Math.hypot(screenX, screenY, acceleration.z);
+        const now = performance.now();
+        state.motionReceived = true;
+        window.clearTimeout(state.motionTimeout);
+
+        if (force > 2.6 && now - state.lastShakeAt > 145) {
+          state.lastShakeAt = now;
+          const boost = 3.2 + clamp((force - 2.6) * 0.82, 0, 7.5);
+          impartSpin((state.lastDirection || 1) * boost);
+          setStatus("手机晃动 · 经轮续风", true);
+          motionMessage.textContent = "已感应晃动；继续转动手机可切换旋转方向。";
+        }
+      }
+
+      function attachMotionListeners() {
+        if (state.motionListening) return;
+        const Orientation = window.DeviceOrientationEvent;
+        const Motion = window.DeviceMotionEvent;
+        if (state.orientationPermissionGranted && Orientation) {
+          window.addEventListener("deviceorientation", handleDeviceOrientation, { passive: true });
+        }
+        if (state.deviceMotionPermissionGranted && Motion) {
+          window.addEventListener("devicemotion", handleDeviceMotion, { passive: true });
+        }
+        screen.orientation?.addEventListener?.("change", calibrateMotion);
+        window.addEventListener("orientationchange", calibrateMotion, { passive: true });
+        state.motionListening = true;
+      }
+
+      function scheduleMotionTimeout() {
+        window.clearTimeout(state.motionTimeout);
+        state.motionTimeout = window.setTimeout(() => {
+          if (state.mode !== "motion" || state.motionReceived) return;
+          motionMessage.textContent = "暂未收到传感器数据，可点按“手机体感”重新校准。";
+          setStatus("等待手机传感器数据", false);
+        }, 2800);
+      }
+
+      function resumeMotionControl() {
+        if (state.mode !== "motion" || state.motionListening) return;
+        if (!state.orientationPermissionGranted && !state.deviceMotionPermissionGranted) return;
+        calibrateMotion();
+        attachMotionListeners();
+        scheduleMotionTimeout();
+      }
+
+      async function startMotionControl() {
+        if (state.motionStarting) return;
+        calibrateMotion();
+
+        if (!window.isSecureContext) {
+          motionMessage.textContent = "体感模式需要 HTTPS 安全连接，可改用鼠标绕转。";
+          setStatus("体感模式需要安全连接", false);
+          return;
+        }
+
+        const Orientation = window.DeviceOrientationEvent;
+        const Motion = window.DeviceMotionEvent;
+        if (!Orientation && !Motion) {
+          motionMessage.textContent = "此设备未提供方向或动作感应器，可改用鼠标模式。";
+          setStatus("未检测到手机传感器", false);
+          return;
+        }
+
+        state.motionStarting = true;
+        const requestId = ++state.motionRequestId;
+
+        try {
+          if (!state.motionPermissionPromise) {
+            let orientationPermission;
+            let motionPermission;
+            try {
+              orientationPermission = !Orientation
+                ? Promise.resolve("unavailable")
+                : state.orientationPermissionGranted
+                  ? Promise.resolve("granted")
+                  : typeof Orientation.requestPermission === "function"
+                    ? Orientation.requestPermission()
+                    : Promise.resolve("granted");
+            } catch (error) {
+              orientationPermission = Promise.reject(error);
+            }
+            try {
+              motionPermission = !Motion
+                ? Promise.resolve("unavailable")
+                : state.deviceMotionPermissionGranted
+                  ? Promise.resolve("granted")
+                  : typeof Motion.requestPermission === "function"
+                    ? Motion.requestPermission()
+                    : Promise.resolve("granted");
+            } catch (error) {
+              motionPermission = Promise.reject(error);
+            }
+            state.motionPermissionPromise = Promise.allSettled([orientationPermission, motionPermission]);
+          }
+
+          const permissionPromise = state.motionPermissionPromise;
+          const [orientationResult, motionResult] = await permissionPromise;
+          if (state.motionPermissionPromise === permissionPromise) state.motionPermissionPromise = null;
+          state.orientationPermissionGranted = Boolean(Orientation)
+            && orientationResult.status === "fulfilled"
+            && orientationResult.value === "granted";
+          state.deviceMotionPermissionGranted = Boolean(Motion)
+            && motionResult.status === "fulfilled"
+            && motionResult.value === "granted";
+
+          if (requestId !== state.motionRequestId || state.mode !== "motion") {
+            if (!document.hidden
+              && state.mode === "motion"
+              && (state.orientationPermissionGranted || state.deviceMotionPermissionGranted)) {
+              queueMicrotask(resumeMotionControl);
+            }
+            return;
+          }
+          if (document.hidden) {
+            stopMotionControl();
+            return;
+          }
+          if (!state.orientationPermissionGranted && !state.deviceMotionPermissionGranted) {
+            throw new Error("motion-permission-denied");
+          }
+
+          attachMotionListeners();
+          scheduleMotionTimeout();
+          if (state.orientationPermissionGranted && state.deviceMotionPermissionGranted) {
+            motionMessage.textContent = "体感已就绪：顺逆转动手机，或轻晃续风。";
+          } else if (state.orientationPermissionGranted) {
+            motionMessage.textContent = "手机旋转已就绪；如需晃动，请允许动作权限。";
+          } else {
+            motionMessage.textContent = "手机晃动已就绪；如需双向旋转，请允许方向权限。";
+          }
+          setStatus("手机体感已就绪", false);
+        } catch (error) {
+          if (requestId !== state.motionRequestId || state.mode !== "motion") return;
+          motionMessage.textContent = "体感权限未开启，可在浏览器设置中允许后重试。";
+          setStatus("手机体感权限未开启", false);
+          showToast("需要允许方向或动作权限才能使用手机体感");
+          console.warn("Motion control unavailable:", error);
+        } finally {
+          if (requestId === state.motionRequestId) state.motionStarting = false;
+        }
+      }
+
+      function stopMotionControl() {
+        state.motionRequestId += 1;
+        state.motionStarting = false;
+        window.clearTimeout(state.motionTimeout);
+        window.removeEventListener("deviceorientation", handleDeviceOrientation);
+        window.removeEventListener("devicemotion", handleDeviceMotion);
+        screen.orientation?.removeEventListener?.("change", calibrateMotion);
+        window.removeEventListener("orientationchange", calibrateMotion);
+        state.motionListening = false;
+        state.motionQuaternion = null;
+        state.motionGravity = null;
+        state.motionGravityBaseline = null;
+        state.motionReceived = false;
+        state.motionInputPending = 0;
+        state.motionTiltPending = null;
+        motionDevice.style.setProperty("--device-tilt", "0deg");
+        tiltIndicator.style.setProperty("--tilt-position", "0%");
+      }
+
+      function jointAngle(a, b, c) {
+        const ux = a.x - b.x;
+        const uy = a.y - b.y;
+        const uz = (a.z || 0) - (b.z || 0);
+        const vx = c.x - b.x;
+        const vy = c.y - b.y;
+        const vz = (c.z || 0) - (b.z || 0);
+        const denominator = Math.hypot(ux, uy, uz) * Math.hypot(vx, vy, vz);
+        if (denominator < 1e-6) return 180;
+        return Math.acos(clamp((ux * vx + uy * vy + uz * vz) / denominator, -1, 1)) * 180 / Math.PI;
+      }
+
+      function closedFistFoldedCount(landmarks, worldLandmarks) {
+        if (!landmarks || landmarks.length < 21) return 0;
+        const fingers = [[5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16], [17, 18, 19, 20]];
+        if (worldLandmarks?.length >= 21) {
+          return fingers.filter(([mcp, pip, dip, tip]) => (
+            jointAngle(worldLandmarks[mcp], worldLandmarks[pip], worldLandmarks[dip]) < 145
+              && jointAngle(worldLandmarks[pip], worldLandmarks[dip], worldLandmarks[tip]) < 165
+          )).length;
+        }
+        const width = camera.videoWidth || 640;
+        const height = camera.videoHeight || 480;
+        const distance = (a, b) => Math.hypot((a.x - b.x) * width, (a.y - b.y) * height);
+        const palmIndices = [0, 5, 9, 13, 17];
+        const center = palmIndices.reduce((point, index) => ({
+          x: point.x + landmarks[index].x / palmIndices.length,
+          y: point.y + landmarks[index].y / palmIndices.length
+        }), { x: 0, y: 0 });
+        const palmWidth = distance(landmarks[5], landmarks[17]);
+        const palmLength = distance(landmarks[0], landmarks[9]);
+        const palmScale = Math.max(palmWidth, palmLength * 1.1, 24);
+        return [[8, 6], [12, 10], [16, 14], [20, 18]].filter(([tip, pip]) => {
+          const tipToPalm = distance(landmarks[tip], center);
+          const tipToWrist = distance(landmarks[tip], landmarks[0]);
+          const pipToWrist = distance(landmarks[pip], landmarks[0]);
+          return tipToPalm < palmScale * 1.05 || tipToWrist < pipToWrist * 1.08;
+        }).length;
+      }
+
+      function isOpenPalmFallback(landmarks) {
+        if (!landmarks || landmarks.length < 21) return false;
+        const width = camera.videoWidth || 640;
+        const height = camera.videoHeight || 480;
+        const wrist = landmarks[0];
+        const extended = [[8, 6], [12, 10], [16, 14], [20, 18]].filter(([tip, pip]) => (
+          Math.hypot((landmarks[tip].x - wrist.x) * width, (landmarks[tip].y - wrist.y) * height)
+            > Math.hypot((landmarks[pip].x - wrist.x) * width, (landmarks[pip].y - wrist.y) * height) * 1.15
+        )).length;
+        return extended >= 3;
+      }
+
+      function resizeOverlay() {
+        if (!camera.videoWidth || !camera.videoHeight) return;
+        const width = matchMedia("(pointer: coarse)").matches ? 320 : 480;
+        const height = Math.round(width * camera.videoHeight / camera.videoWidth);
+        if (overlay.width !== width) overlay.width = width;
+        if (overlay.height !== height) overlay.height = height;
+      }
+
+      const HAND_CONNECTIONS = [
+        [0,1],[1,2],[2,3],[3,4], [0,5],[5,6],[6,7],[7,8],
+        [5,9],[9,10],[10,11],[11,12], [9,13],[13,14],[14,15],[15,16],
+        [13,17],[17,18],[18,19],[19,20],[0,17]
+      ];
+
+      function renderCameraOverlay(landmarks) {
+        const context = overlay.getContext("2d");
+        const width = overlay.width;
+        const height = overlay.height;
+        context.clearRect(0, 0, width, height);
+        state.gestureOverlayNeedsClear = false;
+        if (!landmarks) return;
+
+        const displayPoints = landmarks.map((point) => ({
+          x: (1 - point.x) * width,
+          y: point.y * height
+        }));
+        const spinning = state.gestureMachine.phase === GestureMachine.SPINNING;
+        context.strokeStyle = spinning
+          ? "rgba(237, 196, 100, 0.46)"
+          : "rgba(226, 210, 179, 0.42)";
+        context.lineWidth = Math.max(1.2, width / 390);
+        context.lineCap = "round";
+        context.lineJoin = "round";
+        context.beginPath();
+        HAND_CONNECTIONS.forEach(([from, to]) => {
+          context.moveTo(displayPoints[from].x, displayPoints[from].y);
+          context.lineTo(displayPoints[to].x, displayPoints[to].y);
+        });
+        context.stroke();
+
+        [0, 5, 9, 13, 17].forEach((index) => {
+          const point = displayPoints[index];
+          context.beginPath();
+          context.arc(point.x, point.y, index === 0 ? 3.2 : 2.2, 0, Math.PI * 2);
+          context.fillStyle = spinning
+            ? "rgba(237, 196, 100, 0.68)"
+            : "rgba(226, 210, 179, 0.58)";
+          context.fill();
+        });
+      }
+      function unpackGesturePoints(points) {
+        return points?.length ? points.map(([x, y, z]) => ({ x, y, z })) : null;
+      }
+
+      function gestureAbortError() {
+        const error = new Error("手势模型初始化已取消");
+        error.name = "AbortError";
+        return error;
+      }
+
+      function cancelGestureWorkerInitialization() {
+        if (!state.gesturePendingReject) return;
+        state.gestureWorkerGeneration += 1;
+        state.gesturePendingReject(gestureAbortError());
+      }
+
+      function destroyGestureWorker(markFailed = false) {
+        cancelGestureWorkerInitialization();
+        const worker = state.gestureWorker;
+        state.gestureWorker = null;
+        state.gestureEngine = null;
+        state.gestureFrameInFlight = false;
+        if (markFailed) state.gestureWorkerFailed = true;
+        if (worker) {
+          try {
+            worker.postMessage({ type: "close" });
+          } catch (_) {}
+          worker.terminate();
+        }
+        if (state.gestureWorkerUrl) {
+          URL.revokeObjectURL(state.gestureWorkerUrl);
+          state.gestureWorkerUrl = null;
+        }
+      }
+
+      function createGestureWorker() {
+        if (state.gestureWorker && state.gestureEngine === "worker") {
+          return Promise.resolve(state.gestureWorker);
+        }
+        if (state.gestureWorkerPromise) return state.gestureWorkerPromise;
+        if (!window.Worker || !window.createImageBitmap || !window.OffscreenCanvas) {
+          return Promise.reject(new Error("此浏览器不支持后台视觉识别"));
+        }
+
+        const generation = ++state.gestureWorkerGeneration;
+
+        const workerSource = [
+          '"use strict";',
+          "const BUNDLE_URL = " + JSON.stringify(MEDIAPIPE_CLASSIC_URL) + ";",
+          "const WASM_URL = " + JSON.stringify(MEDIAPIPE_WASM_URL) + ";",
+          "const MODEL_URL = " + JSON.stringify(GESTURE_MODEL_URL) + ";",
+          "let recognizer = null;",
+          "function serializeError(error) {",
+          "  return error && error.message ? error.message : String(error);",
+          "}",
+          "function packPoints(points) {",
+          "  return (points || []).map((point) => [point.x, point.y, point.z || 0]);",
+          "}",
+          "async function initRecognizer() {",
+          "  importScripts(BUNDLE_URL);",
+          "  const vision = self.Vision;",
+          "  if (!vision) throw new Error('MediaPipe vision bundle did not initialize');",
+          "  const files = await vision.FilesetResolver.forVisionTasks(WASM_URL);",
+          "  const options = {",
+          "    baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },",
+          "    runningMode: 'VIDEO',",
+          "    numHands: 1,",
+          "    minHandDetectionConfidence: 0.5,",
+          "    minTrackingConfidence: 0.42,",
+          "    cannedGesturesClassifierOptions: { scoreThreshold: 0.2 }",
+          "  };",
+          "  recognizer = await vision.GestureRecognizer.createFromOptions(files, options);",
+          "}",
+          "self.onmessage = async (event) => {",
+          "  const message = event.data || {};",
+          "  if (message.type === 'init') {",
+          "    try {",
+          "      await initRecognizer();",
+          "      self.postMessage({ type: 'ready' });",
+          "    } catch (error) {",
+          "      self.postMessage({ type: 'fatal', message: serializeError(error) });",
+          "    }",
+          "    return;",
+          "  }",
+          "  if (message.type === 'close') {",
+          "    if (recognizer && recognizer.close) recognizer.close();",
+          "    self.close();",
+          "    return;",
+          "  }",
+          "  if (message.type !== 'frame') return;",
+          "  const bitmap = message.bitmap;",
+          "  try {",
+          "    if (!recognizer) throw new Error('Gesture recognizer is not ready');",
+          "    const results = recognizer.recognizeForVideo(bitmap, message.timestamp);",
+          "    const gestures = results.gestures && results.gestures[0] ? results.gestures[0] : [];",
+          "    const top = gestures.reduce((best, gesture) => (!best || gesture.score > best.score ? gesture : best), null);",
+          "    self.postMessage({",
+          "      type: 'result',",
+          "      seq: message.seq,",
+          "      sessionId: message.sessionId,",
+          "      landmarks: packPoints(results.landmarks && results.landmarks[0]),",
+          "      worldLandmarks: packPoints(results.worldLandmarks && results.worldLandmarks[0]),",
+          "      topCategory: top ? top.categoryName : 'None',",
+          "      topScore: top ? top.score : 0",
+          "    });",
+          "  } catch (error) {",
+          "    self.postMessage({",
+          "      type: 'frame-error',",
+          "      seq: message.seq,",
+          "      sessionId: message.sessionId,",
+          "      message: serializeError(error)",
+          "    });",
+          "  } finally {",
+          "    if (bitmap && bitmap.close) bitmap.close();",
+          "  }",
+          "};"
+        ].join("\n");
+
+        state.gestureWorkerPromise = new Promise((resolve, reject) => {
+          const workerUrl = URL.createObjectURL(new Blob([workerSource], { type: "text/javascript" }));
+          let worker;
+          try {
+            worker = new Worker(workerUrl);
+          } catch (error) {
+            URL.revokeObjectURL(workerUrl);
+            reject(error);
+            return;
+          }
+          let ready = false;
+          const rejectPending = (error) => {
+            if (ready) return;
+            window.clearTimeout(timeout);
+            worker.terminate();
+            URL.revokeObjectURL(workerUrl);
+            if (state.gesturePendingWorker === worker) {
+              state.gesturePendingWorker = null;
+              state.gesturePendingWorkerUrl = null;
+              state.gesturePendingReject = null;
+            }
+            reject(error);
+          };
+          const timeout = window.setTimeout(() => {
+            rejectPending(new Error("后台手势模型加载超时"));
+          }, 25000);
+          state.gesturePendingWorker = worker;
+          state.gesturePendingWorkerUrl = workerUrl;
+          state.gesturePendingReject = rejectPending;
+
+          const fail = (error) => {
+            if (!ready) {
+              rejectPending(error);
+              return;
+            }
+            switchGestureWorkerToMain(error);
+          };
+
+          worker.onerror = (event) => {
+            event.preventDefault();
+            fail(new Error(event.message || "后台手势识别异常"));
+          };
+          worker.onmessageerror = () => fail(new Error("后台手势数据无法读取"));
+          worker.onmessage = (event) => {
+            const message = event.data || {};
+            if (message.type === "ready") {
+              if (generation !== state.gestureWorkerGeneration) {
+                rejectPending(gestureAbortError());
+                return;
+              }
+              ready = true;
+              window.clearTimeout(timeout);
+              state.gesturePendingWorker = null;
+              state.gesturePendingWorkerUrl = null;
+              state.gesturePendingReject = null;
+              state.gestureWorker = worker;
+              state.gestureWorkerUrl = workerUrl;
+              state.gestureEngine = "worker";
+              state.gestureWorkerHasResult = false;
+              state.gestureInferenceInterval = 80;
+              resolve(worker);
+              return;
+            }
+            if (message.type === "fatal") {
+              fail(new Error(message.message || "后台手势模型初始化失败"));
+              return;
+            }
+            if (message.type === "result") {
+              state.gestureFrameInFlight = false;
+              state.gestureWorkerHasResult = true;
+              if (message.sessionId !== state.cameraRequestId
+                || state.mode !== "gesture" || !state.cameraStream) return;
+              processGestureObservation({
+                landmarks: unpackGesturePoints(message.landmarks),
+                worldLandmarks: unpackGesturePoints(message.worldLandmarks),
+                topCategory: message.topCategory,
+                topScore: message.topScore
+              });
+              return;
+            }
+            if (message.type === "frame-error") {
+              state.gestureFrameInFlight = false;
+              if (message.sessionId !== state.cameraRequestId) return;
+              handleGestureFrameError(new Error(message.message || "后台手势帧识别失败"), true);
+            }
+          };
+          worker.postMessage({ type: "init" });
+        }).finally(() => {
+          state.gestureWorkerPromise = null;
+        });
+
+        return state.gestureWorkerPromise;
+      }
+
+      async function createHandTracker() {
+        const vision = await import(MEDIAPIPE_MODULE_URL);
+        const files = await vision.FilesetResolver.forVisionTasks(
+          MEDIAPIPE_WASM_URL
+        );
+        const options = {
+          baseOptions: {
+            modelAssetPath: GESTURE_MODEL_URL,
+            delegate: "GPU"
+          },
+          runningMode: "VIDEO",
+          numHands: 1,
+          minHandDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.42,
+          cannedGesturesClassifierOptions: { scoreThreshold: 0.2 }
+        };
+
+        try {
+          return await vision.GestureRecognizer.createFromOptions(files, options);
+        } catch (error) {
+          options.baseOptions.delegate = "CPU";
+          return vision.GestureRecognizer.createFromOptions(files, options);
+        }
+      }
+
+      async function ensureGestureEngine() {
+        if (state.gestureWorker && state.gestureEngine === "worker") return;
+        if (!state.gestureWorkerFailed) {
+          try {
+            await createGestureWorker();
+            return;
+          } catch (error) {
+            if (error?.name === "AbortError") throw error;
+            state.gestureWorkerFailed = true;
+            console.info("Background gesture recognition unavailable; using low-rate fallback:", error);
+          }
+        }
+        state.handLandmarker = state.handLandmarker || await createHandTracker();
+        state.gestureEngine = "main";
+        state.gestureInferenceInterval = 125;
+      }
+
+      function switchGestureWorkerToMain(error) {
+        if (state.gestureEngine !== "worker") return;
+        console.info("Background gesture recognition stopped; switching to fallback:", error);
+        destroyGestureWorker(true);
+        state.gestureEngine = "loading";
+        createHandTracker().then((tracker) => {
+          state.handLandmarker = tracker;
+          state.gestureEngine = "main";
+          state.gestureInferenceInterval = 125;
+          state.lastGestureInferenceAt = 0;
+        }).catch((fallbackError) => {
+          console.warn("Gesture fallback unavailable:", fallbackError);
+          if (state.mode === "gesture" && state.cameraStream) {
+            stopCamera();
+            cameraMessage.textContent = "手势识别未启动，可继续使用鼠标绕转";
+            gestureMessage.textContent = "模型加载失败，请检查网络后再次选择“隔空手势”。";
+            setStatus("视觉感应器不可用", false);
+          }
+        });
+      }
+
+      function resetGestureSession() {
+        state.gestureMachine = GestureMachine.createState();
+        state.gestureDriveUntil = 0;
+        state.gestureErrorFrames = 0;
+        state.gestureOverlayNeedsClear = false;
+        state.latestGestureLandmarks = null;
+        state.lastOverlayRenderAt = 0;
+        state.inputResidual = 0;
+        state.inputActiveUntil = performance.now();
+        cameraFrame.dataset.arState = GestureMachine.WAIT_OPEN;
+        setText(gesturePhaseLabel, "张开手掌 · 准备");
+      }
+
+      function updateGesturePresentation(evidence) {
+        const phase = state.gestureMachine.phase;
+        cameraFrame.dataset.arState = phase;
+        if (phase === GestureMachine.WAIT_OPEN) {
+          setText(gesturePhaseLabel, "张开手掌 · 准备");
+          setStatus(evidence === GestureMachine.OPEN ? "正在确认张开的手掌" : "请张开手掌进入准备状态", evidence === GestureMachine.OPEN);
+          setText(gestureMessage, "把张开的手掌完整放进画面；确认后即可握拳启动主画面经轮。");
+          return;
+        }
+        if (phase === GestureMachine.ARMED) {
+          setText(gesturePhaseLabel, "已准备 · 握拳启动");
+          setStatus("已准备 · 现在请握拳", true);
+          setText(gestureMessage, "现在握拳，主画面经轮会自动顺时针转动。");
+          return;
+        }
+        setText(gesturePhaseLabel, "已握拳 · 自动转动");
+        if (evidence === GestureMachine.OPEN) {
+          setStatus("已松开 · 正在暂停", false);
+        } else if (evidence === GestureMachine.MISSING || evidence === GestureMachine.AMBIGUOUS) {
+          setStatus("正在保持握持跟踪", true);
+        } else {
+          setStatus("握拳驱动中 · 自动顺时针", true);
+        }
+        setText(gestureMessage, "保持握拳即可持续转动；张开手掌即可松开并重新准备。");
+      }
+
+      function processGestureObservation(observation, resetErrors = true) {
+        const landmarks = observation.landmarks?.length >= 21 ? observation.landmarks : null;
+        const metrics = landmarks ? {
+          hasHand: true,
+          topCategory: observation.topCategory || "None",
+          topScore: observation.topScore || 0,
+          foldedCount: closedFistFoldedCount(landmarks, observation.worldLandmarks),
+          openPalmFallback: isOpenPalmFallback(landmarks)
+        } : {
+          hasHand: false,
+          topCategory: "None",
+          topScore: 0,
+          foldedCount: 0,
+          openPalmFallback: false
+        };
+        const evidence = GestureMachine.classify(metrics, state.gestureMachine.phase);
+        const transition = GestureMachine.step(state.gestureMachine, evidence);
+        const hadVisibleOverlay = Boolean(state.latestGestureLandmarks);
+        state.gestureMachine = transition.state;
+        state.latestGestureLandmarks = landmarks;
+        state.gestureOverlayNeedsClear = !landmarks && hadVisibleOverlay;
+        if (resetErrors) state.gestureErrorFrames = 0;
+
+        if (transition.effects.started) {
+          if (state.velocity < 0) state.velocity = 0;
+        }
+        if (transition.effects.drive) {
+          state.gestureDriveUntil = performance.now() + 220;
+        } else if (evidence === GestureMachine.OPEN || transition.effects.stopped) {
+          state.gestureDriveUntil = 0;
+        }
+
+        updateGesturePresentation(evidence);
+        ensureAnimation();
+      }
+
+      function handleGestureFrameError(error, fromWorker = false) {
+        state.gestureErrorFrames += 1;
+        if (state.gestureErrorFrames === 1) {
+          console.warn("Gesture frame skipped:", error);
+        }
+        processGestureObservation({
+          landmarks: null,
+          worldLandmarks: null,
+          topCategory: "None",
+          topScore: 0
+        }, false);
+
+        if (fromWorker && state.gestureErrorFrames >= 3) {
+          switchGestureWorkerToMain(error);
+          return;
+        }
+        if (!fromWorker && state.gestureErrorFrames >= 8) {
+          console.warn("Gesture recognition stopped after repeated frame errors:", error);
+          stopCamera();
+          cameraMessage.textContent = "手势识别已中断，点击“隔空手势”可重试";
+          gestureMessage.textContent = "摄像头已安全关闭；重新选择手势模式即可再次启动。";
+          setStatus("手势识别已中断 · 可重试", false);
+          showToast("手势识别中断，请点击“隔空手势”重试");
+        }
+      }
+
+      function queueGestureWorkerFrame(inferenceNow) {
+        if (!state.gestureWorker || state.gestureFrameInFlight) return;
+        const sessionId = state.cameraRequestId;
+        const seq = ++state.gestureFrameSequence;
+        state.gestureFrameInFlight = true;
+        state.gestureFrameSentAt = inferenceNow;
+        state.lastVideoTime = camera.currentTime;
+        state.lastGestureInferenceAt = inferenceNow;
+
+        Promise.resolve()
+          .then(() => createImageBitmap(camera, {
+            resizeWidth: 320,
+            resizeHeight: 240,
+            resizeQuality: "low"
+          }))
+          .catch(() => createImageBitmap(camera))
+          .then((bitmap) => {
+            if (sessionId !== state.cameraRequestId
+              || state.mode !== "gesture" || !state.cameraStream
+              || state.gestureEngine !== "worker" || !state.gestureWorker) {
+              bitmap.close();
+              state.gestureFrameInFlight = false;
+              return;
+            }
+            try {
+              state.gestureWorker.postMessage({
+                type: "frame",
+                bitmap,
+                timestamp: inferenceNow,
+                seq,
+                sessionId
+              }, [bitmap]);
+            } catch (error) {
+              bitmap.close();
+              throw error;
+            }
+          })
+          .catch((error) => {
+            state.gestureFrameInFlight = false;
+            if (sessionId === state.cameraRequestId) handleGestureFrameError(error, true);
+          });
+      }
+
+      async function startCamera() {
+        if (state.cameraStarting || state.cameraStream) return;
+        state.cameraStarting = true;
+        const requestId = ++state.cameraRequestId;
+        let stream = null;
+        let cancelled = false;
+        resetGestureSession();
+        cameraLoading.classList.remove("hidden");
+        cameraMessage.textContent = "首次加载手势模型可能需要十几秒…";
+        gestureMessage.textContent = "先张开手掌准备；再握拳，主画面经轮会自动转动。";
+        setStatus("视觉感应器启动中", true);
+
+        try {
+          if (!navigator.mediaDevices?.getUserMedia) {
+            throw new Error("此浏览器无法调用摄像头");
+          }
+
+          await ensureGestureEngine();
+
+          if (requestId !== state.cameraRequestId || state.mode !== "gesture") {
+            cancelled = true;
+            return;
+          }
+
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "user",
+              width: { ideal: 320, max: 480 },
+              height: { ideal: 240, max: 360 }
+            },
+            audio: false
+          });
+
+          if (requestId !== state.cameraRequestId || state.mode !== "gesture") {
+            cancelled = true;
+            stream.getTracks().forEach((track) => track.stop());
+            return;
+          }
+
+          state.cameraStream = stream;
+          camera.srcObject = stream;
+          await camera.play();
+
+          if (requestId !== state.cameraRequestId || state.mode !== "gesture") {
+            cancelled = true;
+            stream.getTracks().forEach((track) => track.stop());
+            state.cameraStream = null;
+            camera.srcObject = null;
+            return;
+          }
+
+          stream.getVideoTracks()[0]?.addEventListener("ended", () => {
+            if (state.cameraStream !== stream) return;
+            cancelAnimationFrame(state.cameraLoop);
+            state.cameraLoop = 0;
+            state.cameraStream = null;
+            camera.srcObject = null;
+            camera.classList.remove("ready");
+            resetGestureSession();
+            overlay.getContext("2d").clearRect(0, 0, overlay.width, overlay.height);
+            cameraLoading.classList.remove("hidden");
+            cameraMessage.textContent = "摄像头连接已中断，可再次选择“隔空手势”重试";
+            setStatus("摄像头连接已中断", false);
+          }, { once: true });
+
+          resizeOverlay();
+          camera.classList.add("ready");
+          cameraLoading.classList.add("hidden");
+          updateGesturePresentation(GestureMachine.MISSING);
+          state.lastVideoTime = -1;
+          state.lastGestureInferenceAt = 0;
+          state.lastOverlayRenderAt = 0;
+          detectGesture();
+        } catch (error) {
+          stream?.getTracks().forEach((track) => track.stop());
+          if (state.cameraStream === stream) state.cameraStream = null;
+          if (camera.srcObject === stream) camera.srcObject = null;
+          camera.classList.remove("ready");
+          if (requestId !== state.cameraRequestId) {
+            cancelled = true;
+            return;
+          }
+          resetGestureSession();
+          const permissionDenied = error?.name === "NotAllowedError";
+          cameraMessage.textContent = permissionDenied
+            ? "摄像头权限未开启，请允许访问后重试"
+            : "手势识别未启动，可继续使用鼠标绕转";
+          gestureMessage.textContent = permissionDenied
+            ? "浏览器地址栏中允许摄像头权限，然后再次选择“隔空手势”。"
+            : "模型或摄像头连接失败，请检查网络与安全连接。";
+          setStatus("视觉感应器不可用", false);
+          showToast(permissionDenied ? "需要摄像头权限才能识别手势" : "手势模式暂不可用，鼠标模式仍可使用");
+          console.warn("Camera gesture mode unavailable:", error);
+        } finally {
+          state.cameraStarting = false;
+          if (cancelled && state.mode === "gesture" && !document.hidden && !state.cameraStream) {
+            startCamera();
+          }
+        }
+      }
+
+      function stopCamera() {
+        state.cameraRequestId += 1;
+        cancelGestureWorkerInitialization();
+        cancelAnimationFrame(state.cameraLoop);
+        state.cameraLoop = 0;
+        state.lastGestureInferenceAt = 0;
+        resetGestureSession();
+        camera.classList.remove("ready");
+        cameraLoading.classList.remove("hidden");
+        overlay.getContext("2d").clearRect(0, 0, overlay.width, overlay.height);
+        const stream = state.cameraStream;
+        state.cameraStream = null;
+        camera.srcObject = null;
+        stream?.getTracks().forEach((track) => track.stop());
+      }
+
+      function detectGesture() {
+        if (state.mode !== "gesture" || !state.cameraStream || !state.gestureEngine) return;
+
+        try {
+          const inferenceNow = performance.now();
+          if (camera.readyState >= 2
+            && camera.currentTime !== state.lastVideoTime
+            && inferenceNow - state.lastGestureInferenceAt >= state.gestureInferenceInterval) {
+            if (state.gestureEngine === "worker") {
+              const workerTimeout = state.gestureWorkerHasResult ? 2500 : 8000;
+              if (state.gestureFrameInFlight && inferenceNow - state.gestureFrameSentAt > workerTimeout) {
+                switchGestureWorkerToMain(new Error("后台手势识别响应超时"));
+              } else if (!state.gestureFrameInFlight) {
+                queueGestureWorkerFrame(inferenceNow);
+              }
+            } else if (state.gestureEngine === "main" && state.handLandmarker) {
+              state.lastVideoTime = camera.currentTime;
+              state.lastGestureInferenceAt = inferenceNow;
+              const startedAt = performance.now();
+              const results = state.handLandmarker.recognizeForVideo(camera, inferenceNow);
+              const topGesture = results.gestures?.[0]?.reduce((best, gesture) => (
+                !best || gesture.score > best.score ? gesture : best
+              ), null);
+              const inferenceCost = performance.now() - startedAt;
+              state.gestureInferenceInterval = clamp(inferenceCost * 2.5, 125, 250);
+              processGestureObservation({
+                landmarks: results.landmarks?.[0] || null,
+                worldLandmarks: results.worldLandmarks?.[0] || null,
+                topCategory: topGesture?.categoryName || "None",
+                topScore: topGesture?.score || 0
+              });
+            }
+          }
+        } catch (error) {
+          handleGestureFrameError(error, state.gestureEngine === "worker");
+        } finally {
+          if (state.mode === "gesture" && state.cameraStream) {
+            state.cameraLoop = requestAnimationFrame(detectGesture);
+          }
+        }
+      }
+      buildMantraSprites();
+      resizeMantraCanvas();
+      document.fonts?.ready.then(() => {
+        buildMantraSprites();
+        state.lastMantraRenderAt = 0;
+        ensureAnimation();
+      });
+      reducedMotionQuery.addEventListener("change", (event) => {
+        state.reducedMotion = event.matches;
+        state.lastMantraRenderAt = 0;
+        ensureAnimation();
+      });
+      const stageVisibilityObserver = new IntersectionObserver(([entry]) => {
+        const visible = entry.isIntersecting && entry.intersectionRatio > 0.04;
+        if (visible === state.stageVisible) return;
+        state.stageVisible = visible;
+        if (visible) {
+          state.lastMantraRenderAt = 0;
+          ensureAnimation();
+        } else {
+          clearMantraField();
+        }
+      }, { threshold: [0, 0.05] });
+      stageVisibilityObserver.observe(stage);
+      createDrum();
+      updateFallbackCounterweight();
+      initMani3D();
+      stage.addEventListener("pointermove", onPointerOrbit);
+      stage.addEventListener("pointerleave", onPointerLeave);
+      stage.addEventListener("keydown", onStageKeydown);
+      mouseModeButton.addEventListener("click", () => updateMode("mouse"));
+      gestureModeButton.addEventListener("click", () => updateMode("gesture"));
+      motionModeButton.addEventListener("click", () => updateMode("motion"));
+      soundButton.addEventListener("click", toggleSound);
+      window.addEventListener("resize", () => {
+        resizeOverlay();
+        cancelAnimationFrame(state.mantraResizeFrame);
+        state.mantraResizeFrame = requestAnimationFrame(() => {
+          state.mantraResizeFrame = 0;
+          resizeMantraCanvas();
+        });
+        window.clearTimeout(createDrum.resizeTimer);
+        createDrum.resizeTimer = window.setTimeout(createDrum, 120);
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          clearMantraField();
+          state.mantraEnergy = 0;
+          cancelAnimationFrame(state.animationFrame);
+          state.animationFrame = 0;
+          if (state.cameraStream || state.cameraStarting) stopCamera();
+          if (state.motionListening || state.motionStarting) stopMotionControl();
+        } else if (state.mode === "gesture") {
+          startCamera();
+        } else if (state.mode === "motion") {
+          resumeMotionControl();
+        }
+        if (!document.hidden && (Math.abs(state.velocity) > 0 || state.needs3DRender || state.counterweightMoving)) {
+          ensureAnimation();
+        }
+      });
+      window.addEventListener("pageshow", () => {
+        if (state.mode === "gesture" && !state.cameraStream) startCamera();
+        else if (state.mode === "motion") resumeMotionControl();
+        ensureAnimation();
+      });
+      window.addEventListener("pagehide", (event) => {
+        clearMantraField();
+        stopCamera();
+        stopMotionControl();
+        cancelAnimationFrame(state.animationFrame);
+        state.animationFrame = 0;
+        if (!event.persisted && state.mani3D) {
+          state.mani3D.dispose();
+          state.mani3D = null;
+        }
+        if (!event.persisted) destroyGestureWorker();
+      });
+
+      ensureAnimation();
+    })();
+  </script>
+</body>
+</html>
